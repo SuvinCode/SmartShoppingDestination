@@ -16,10 +16,10 @@ namespace backend.Controllers
     public class ListsController : ControllerBase
     {
         private readonly DocketDbContext _context;
-        private readonly ComparisonEngine _comparisonEngine;
-        private readonly PythonAIServiceClient _aiClient;
+        private readonly IComparisonEngine _comparisonEngine;
+        private readonly IPythonAIServiceClient _aiClient;
 
-        public ListsController(DocketDbContext context, ComparisonEngine comparisonEngine, PythonAIServiceClient aiClient)
+        public ListsController(DocketDbContext context, IComparisonEngine comparisonEngine, IPythonAIServiceClient aiClient)
         {
             _context = context;
             _comparisonEngine = comparisonEngine;
@@ -29,31 +29,33 @@ namespace backend.Controllers
         [HttpGet]
         public IActionResult GetList([FromQuery] int userId)
         {
-            var list = _context.ShoppingListItems.Where(i => i.UserId == userId).ToList();
+            var list = _context.ShoppingListItems.Where(i => i.UserId == userId && !i.IsCompleted).ToList();
             return Ok(list);
         }
 
         [HttpPost]
-        public IActionResult AddItem([FromBody] ShoppingListItem item)
+        public IActionResult AddItem([FromBody] AddItemDto dto)
         {
+            if (dto == null) return BadRequest("Invalid payload.");
+
             // Clean name from store branding
-            string genericName = item.ItemName;
+            string genericName = dto.ItemName;
             if (genericName.StartsWith("Coles ", StringComparison.OrdinalIgnoreCase))
                 genericName = genericName.Substring(6);
             else if (genericName.StartsWith("Woolworths ", StringComparison.OrdinalIgnoreCase))
                 genericName = genericName.Substring(11);
             else if (genericName.StartsWith("WW ", StringComparison.OrdinalIgnoreCase))
                 genericName = genericName.Substring(3);
-                
-            item.ItemName = genericName;
-            
+
+            string packageSize = dto.PackageSize;
             // Try to auto-resolve packagesize
-            var match = _context.CatalogItems.FirstOrDefault(c => c.Name.ToLower().Contains(item.ItemName.ToLower()));
-            if (match != null)
+            var match = _context.CatalogItems.FirstOrDefault(c => c.Name.ToLower().Contains(genericName.ToLower()));
+            if (match != null && string.IsNullOrEmpty(packageSize))
             {
-                item.PackageSize = match.PackageSize;
+                packageSize = match.PackageSize;
             }
 
+            var item = new ShoppingListItem(dto.UserId, genericName, dto.Quantity, packageSize);
             _context.ShoppingListItems.Add(item);
             _context.SaveChanges();
             return Ok(item);
@@ -73,7 +75,7 @@ namespace backend.Controllers
         [HttpPost("clear")]
         public IActionResult ClearList([FromQuery] int userId)
         {
-            var items = _context.ShoppingListItems.Where(i => i.UserId == userId).ToList();
+            var items = _context.ShoppingListItems.Where(i => i.UserId == userId && !i.IsCompleted).ToList();
             _context.ShoppingListItems.RemoveRange(items);
             _context.SaveChanges();
             return Ok(new { message = "List cleared" });
@@ -82,16 +84,16 @@ namespace backend.Controllers
         [HttpPost("sync-loyalty")]
         public IActionResult SyncLoyalty([FromQuery] int userId)
         {
-            // Clear current list and pre-populate with Flybuys/Everyday Rewards history
-            var currentItems = _context.ShoppingListItems.Where(i => i.UserId == userId).ToList();
+            // Clear current active list and pre-populate with Flybuys/Everyday Rewards history
+            var currentItems = _context.ShoppingListItems.Where(i => i.UserId == userId && !i.IsCompleted).ToList();
             _context.ShoppingListItems.RemoveRange(currentItems);
 
             var usualItems = new[]
             {
-                new ShoppingListItem { UserId = userId, ItemName = "White Toast Bread", Quantity = 1, PackageSize = "650g" },
-                new ShoppingListItem { UserId = userId, ItemName = "Full Cream Milk", Quantity = 2, PackageSize = "2L" },
-                new ShoppingListItem { UserId = userId, ItemName = "Bega Tasty Cheese Block", Quantity = 1, PackageSize = "500g" },
-                new ShoppingListItem { UserId = userId, ItemName = "Cavendish Bananas", Quantity = 1, PackageSize = "1kg" }
+                new ShoppingListItem(userId, "White Toast Bread", 1, "650g"),
+                new ShoppingListItem(userId, "Full Cream Milk", 2, "2L"),
+                new ShoppingListItem(userId, "Bega Tasty Cheese Block", 1, "500g"),
+                new ShoppingListItem(userId, "Cavendish Bananas", 1, "1kg")
             };
 
             _context.ShoppingListItems.AddRange(usualItems);
@@ -119,7 +121,6 @@ namespace backend.Controllers
                 .Select(i => new { i.Id, i.Name })
                 .ToList()
                 .Select(i => {
-                    // strip brand
                     string name = i.Name
                         .Replace("Coles ", "", StringComparison.OrdinalIgnoreCase)
                         .Replace("Woolworths ", "", StringComparison.OrdinalIgnoreCase)
@@ -132,29 +133,20 @@ namespace backend.Controllers
 
             foreach (var ocrItem in ocrResult.Items)
             {
-                // Call python matcher
                 var matchResult = await _aiClient.MatchCatalogItemAsync(ocrItem.RawName, dbCandidates);
                 string genericName = ocrItem.RawName;
                 
                 if (matchResult.Matches != null && matchResult.Matches.Any())
                 {
-                    // Use the top matched catalog candidate name
                     genericName = matchResult.Matches.First().Candidate.Name;
                 }
 
-                var newItem = new ShoppingListItem
-                {
-                    UserId = userId,
-                    ItemName = genericName,
-                    Quantity = ocrItem.Quantity,
-                    PackageSize = "" 
-                };
+                var newItem = new ShoppingListItem(userId, genericName, ocrItem.Quantity, "");
                 
-                // Fetch package size from db if available
                 var dbMatch = _context.CatalogItems.FirstOrDefault(c => c.Name.ToLower().Contains(genericName.ToLower()));
                 if (dbMatch != null)
                 {
-                    newItem.PackageSize = dbMatch.PackageSize;
+                    newItem.SetPackageSize(dbMatch.PackageSize);
                 }
                 
                 matchedItems.Add(newItem);
@@ -162,15 +154,52 @@ namespace backend.Controllers
 
             if (matchedItems.Any())
             {
-                // Clear active list first (replacing with imported list)
-                var activeList = _context.ShoppingListItems.Where(i => i.UserId == userId).ToList();
-                _context.ShoppingListItems.RemoveRange(activeList);
+                // 1. Save completed copies of each item to the user's purchase history (for product ranking)
+                var historyItems = matchedItems.Select(item => {
+                    var hist = new ShoppingListItem(item.UserId, item.ItemName, item.Quantity, item.PackageSize);
+                    hist.ToggleCompletion(); // Mark as completed (history)
+                    return hist;
+                }).ToList();
+                _context.ShoppingListItems.AddRange(historyItems);
+
+                // 2. Append/update items in the user's active shopping list (IsCompleted = false)
+                foreach (var item in matchedItems)
+                {
+                    var existing = _context.ShoppingListItems
+                        .FirstOrDefault(i => i.UserId == userId && !i.IsCompleted && i.ItemName.ToLower() == item.ItemName.ToLower());
+                    if (existing != null)
+                    {
+                        existing.UpdateQuantity(existing.Quantity + item.Quantity);
+                    }
+                    else
+                    {
+                        _context.ShoppingListItems.Add(item);
+                    }
+                }
                 
-                _context.ShoppingListItems.AddRange(matchedItems);
                 _context.SaveChanges();
             }
 
-            return Ok(new { store = ocrResult.StoreDetected, rawText = ocrResult.RawText, items = matchedItems });
+            var prefs = _context.UserPreferences.FirstOrDefault(p => p.UserId == userId);
+            if (prefs == null)
+            {
+                prefs = new UserPreferences(userId);
+            }
+
+            double distance = 0.0;
+            string storeName = ocrResult.StoreDetected ?? "Unknown";
+            if (storeName.Equals("Coles", StringComparison.OrdinalIgnoreCase))
+                distance = prefs.DistanceToColesKm;
+            else if (storeName.Equals("Woolworths", StringComparison.OrdinalIgnoreCase))
+                distance = prefs.DistanceToWoolworthsKm;
+            else if (storeName.Equals("Aldi", StringComparison.OrdinalIgnoreCase))
+                distance = Math.Round((prefs.DistanceToColesKm + prefs.DistanceToWoolworthsKm) / 2.0 + 2.5, 1);
+            else if (storeName.Equals("IGA", StringComparison.OrdinalIgnoreCase))
+                distance = Math.Max(0.5, Math.Round((prefs.DistanceToColesKm + prefs.DistanceToWoolworthsKm) / 2.0 - 0.5, 1));
+            else if (storeName.Equals("Costco", StringComparison.OrdinalIgnoreCase))
+                distance = 18.0;
+
+            return Ok(new { store = ocrResult.StoreDetected, rawText = ocrResult.RawText, items = matchedItems, distance });
         }
 
         [HttpPost("compare")]
@@ -181,7 +210,7 @@ namespace backend.Controllers
             
             if (prefs == null)
             {
-                prefs = new UserPreferences { UserId = userId };
+                prefs = new UserPreferences(userId);
                 _context.UserPreferences.Add(prefs);
                 _context.SaveChanges();
             }
@@ -198,25 +227,24 @@ namespace backend.Controllers
         [HttpPost("checkout")]
         public IActionResult Checkout([FromQuery] int userId, [FromBody] CheckoutRequest request)
         {
-            // Log saving in database
-            var log = new SavingLog
-            {
-                UserId = userId,
-                StorePicked = request.StorePicked,
-                AmountSaved = request.AmountSaved,
-                TotalSpent = request.TotalSpent,
-                Date = DateTime.UtcNow
-            };
+            var log = new SavingLog(userId, request.StorePicked, request.AmountSaved, request.TotalSpent);
 
             _context.SavingLogs.Add(log);
             
-            // Clear shopping list after checkout
             var listItems = _context.ShoppingListItems.Where(i => i.UserId == userId).ToList();
             _context.ShoppingListItems.RemoveRange(listItems);
             
             _context.SaveChanges();
             return Ok(new { message = "Checkout logged, list cleared", log });
         }
+    }
+
+    public class AddItemDto
+    {
+        public int UserId { get; set; }
+        public string ItemName { get; set; } = "";
+        public int Quantity { get; set; } = 1;
+        public string PackageSize { get; set; } = "";
     }
 
     public class CheckoutRequest

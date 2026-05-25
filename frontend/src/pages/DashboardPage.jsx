@@ -19,14 +19,22 @@ import {
   Navigation,
   Check,
   Fuel,
-  CreditCard
+  CreditCard,
+  MapPin,
+  Trophy,
+  Star,
+  ArrowRight,
+  Receipt
 } from 'lucide-react';
+
+import Logo from '../components/Logo';
 
 function DashboardPage({ user, onLogout }) {
   const [activeTab, setActiveTab] = useState('compare'); // 'compare' | 'analytics' | 'settings'
   const [searchQuery, setSearchQuery] = useState('');
   const [autocompleteResults, setAutocompleteResults] = useState([]);
   const [shoppingList, setShoppingList] = useState([]);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
   
   // State for user preferences
   const [preferences, setPreferences] = useState({
@@ -35,7 +43,8 @@ function DashboardPage({ user, onLogout }) {
     fuelCostPerKm: 0.15,
     hasFlybuys: false,
     hasEverydayRewards: false,
-    minSplitSavingThreshold: 3.00
+    minSplitSavingThreshold: 3.00,
+    homeAddress: localStorage.getItem(`docket_home_address_${user?.userId || 'guest'}`) || 'Richmond VIC'
   });
 
   // State for comparison
@@ -50,6 +59,10 @@ function DashboardPage({ user, onLogout }) {
     averageSavings: 0,
     history: []
   });
+
+  // State for store recommendations (6-phase engine)
+  const [storeRecommendations, setStoreRecommendations] = useState(null);
+  const [recommendationsLoading, setRecommendationsLoading] = useState(false);
 
   // State for notifications
   const [notifications, setNotifications] = useState([]);
@@ -80,11 +93,39 @@ function DashboardPage({ user, onLogout }) {
     { Name: 'Cavendish Bananas', Category: 'Produce', PackageSize: '1kg' }
   ];
 
+  const getStoreAddress = (storeName) => {
+    const addresses = {
+      'Coles': 'Coles Richmond, Victoria Gardens Shopping Centre, Richmond VIC 3121',
+      'Woolworths': 'Woolworths Richmond, 261-271 Bridge Rd, Richmond VIC 3121',
+      'Aldi': 'Aldi Richmond, 459 Church St, Richmond VIC 3121',
+      'IGA': 'IGA Richmond, 203 Barkly St, Richmond VIC 3121',
+      'Costco': 'Costco Wholesale, 381 Footscray Rd, Docklands VIC 3008'
+    };
+    return addresses[storeName] || `${storeName} Supermarket, Richmond VIC 3121`;
+  };
+
   useEffect(() => {
-    loadShoppingList();
-    loadPreferences();
-    loadSavingsStats();
-    loadNotifications();
+    const initDashboard = async () => {
+      // For demo account, clear the active list on login/session start
+      if (user?.username?.toLowerCase() === 'demo') {
+        try {
+          await fetch(`${API_URL}/lists/clear?userId=${user.userId}`, { method: 'POST' });
+        } catch (e) {
+          console.warn("Could not clear active list for demo account on backend:", e);
+        }
+        setShoppingList([]);
+        setComparison(null);
+      } else {
+        await loadShoppingList();
+      }
+      
+      loadPreferences();
+      loadSavingsStats();
+      loadNotifications();
+      loadStoreRecommendations();
+    };
+
+    initDashboard();
   }, []);
 
   useEffect(() => {
@@ -109,12 +150,16 @@ function DashboardPage({ user, onLogout }) {
       const data = await response.json();
       setShoppingList(data);
     } catch {
-      // Offline fallback: load pre-populated list
-      setShoppingList([
-        { id: 1, itemName: "Penne Pasta", quantity: 1, packageSize: "500g" },
-        { id: 2, itemName: "Fresh Full Cream Milk", quantity: 2, packageSize: "2L" },
-        { id: 3, itemName: "Cadbury Dairy Milk Chocolate Block", quantity: 1, packageSize: "180g" }
-      ]);
+      // Offline fallback: load empty list for demo, pre-populated list otherwise
+      if (user?.username?.toLowerCase() === 'demo') {
+        setShoppingList([]);
+      } else {
+        setShoppingList([
+          { id: 1, itemName: "Penne Pasta", quantity: 1, packageSize: "500g" },
+          { id: 2, itemName: "Fresh Full Cream Milk", quantity: 2, packageSize: "2L" },
+          { id: 3, itemName: "Cadbury Dairy Milk Chocolate Block", quantity: 1, packageSize: "180g" }
+        ]);
+      }
     }
   };
 
@@ -123,9 +168,16 @@ function DashboardPage({ user, onLogout }) {
       const response = await fetch(`${API_URL}/preferences?userId=${user.userId}`);
       if (!response.ok) throw new Error();
       const data = await response.json();
-      setPreferences(data);
+      setPreferences({
+        ...data,
+        homeAddress: localStorage.getItem(`docket_home_address_${user.userId}`) || 'Richmond VIC'
+      });
     } catch {
-      // Keep defaults
+      // Keep defaults but update homeAddress
+      setPreferences(prev => ({
+        ...prev,
+        homeAddress: localStorage.getItem(`docket_home_address_${user.userId}`) || 'Richmond VIC'
+      }));
     }
   };
 
@@ -167,6 +219,46 @@ function DashboardPage({ user, onLogout }) {
       ];
       setNotifications(mockNotifs);
       setUnreadCount(1);
+    }
+  };
+
+  // loadStoreRecommendations — Phase 1-6 store ranking
+  const loadStoreRecommendations = async () => {
+    setRecommendationsLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/recommendations?userId=${user.userId}`);
+      if (!response.ok) throw new Error();
+      const data = await response.json();
+      setStoreRecommendations(data);
+    } catch {
+      // Offline mock: simulates realistic output of the 6-phase engine
+      setStoreRecommendations({
+        productRankings: [
+          { productName: 'Full Cream Milk 2L', occurrences: 12, rank: 1, rankWeight: 1.0 },
+          { productName: 'White Bread 650g', occurrences: 11, rank: 2, rankWeight: 0.5 },
+          { productName: 'Chicken Breast 500g', occurrences: 9, rank: 3, rankWeight: 0.33 },
+          { productName: 'Cheese Block 500g', occurrences: 9, rank: 3, rankWeight: 0.33 },
+          { productName: 'Eggs 12pk', occurrences: 7, rank: 5, rankWeight: 0.2 },
+        ],
+        topByWeightedSavings: [
+          { storeName: 'Coles', weightedScore: 1.33, estimatedWeeklySaving: 18.00, winningProducts: ['Chicken Breast 500g', 'Western Star Butter Block Salted'], specialDiscounts: ['Chicken Breast 500g'], savingsSummary: 'Strong on your Rank 3 items, estimated saving $18.00' },
+          { storeName: 'Woolworths', weightedScore: 0.70, estimatedWeeklySaving: 15.00, winningProducts: ['Bega Tasty Cheese Block', 'Eggs 12pk'], specialDiscounts: ['Bega Tasty Cheese Block'], savingsSummary: 'Best for your cheese and eggs, estimated saving $15.00' },
+          { storeName: 'Aldi', weightedScore: 1.20, estimatedWeeklySaving: 20.00, winningProducts: ['Full Cream Milk', 'White Toast Bread'], specialDiscounts: [], savingsSummary: 'Cheapest milk and bread, estimated saving $20.00' },
+          { storeName: 'IGA', weightedScore: 0.40, estimatedWeeklySaving: 8.50, winningProducts: ['Eggs 12pk'], specialDiscounts: ['Eggs 12pk'], savingsSummary: 'Convenient but slightly more expensive overall' },
+          { storeName: 'Costco', weightedScore: 0.95, estimatedWeeklySaving: 25.00, winningProducts: ['Bega Tasty Cheese Block', 'Full Cream Milk'], specialDiscounts: ['Bega Tasty Cheese Block'], savingsSummary: 'Great bulk savings if you travel' }
+        ],
+        topByProximity: [
+          { storeName: 'Woolworths', distanceKm: 0.8, driveMinutes: 2, proximitySummary: '0.8 km, ~2 min drive' },
+          { storeName: 'Coles', distanceKm: 1.2, driveMinutes: 2, proximitySummary: '1.2 km, ~2 min drive' },
+          { storeName: 'IGA', distanceKm: 2.1, driveMinutes: 4, proximitySummary: '2.1 km, ~4 min drive' },
+          { storeName: 'Aldi', distanceKm: 4.6, driveMinutes: 9, proximitySummary: '4.6 km, ~9 min drive' },
+          { storeName: 'Costco', distanceKm: 18.0, driveMinutes: 25, proximitySummary: '18.0 km, ~25 min drive' }
+        ],
+        tradeOffNarrative: 'Aldi saves you the most ($20.00) but is 4.6 km away. Woolworths saves $5.00 less but is only 0.8 km from you.',
+        splitShopSuggestion: null
+      });
+    } finally {
+      setRecommendationsLoading(false);
     }
   };
 
@@ -423,68 +515,81 @@ function DashboardPage({ user, onLogout }) {
   };
 
   // 9. Receipt upload handlers
-  const handleFileChange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    await processReceiptUpload(file);
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    setUploadedFiles(prev => [...prev, ...files]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const processReceiptUpload = async (file) => {
+  const handleRemoveFile = (index) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleScanDocuments = async () => {
+    if (uploadedFiles.length === 0) {
+      showToast("Please upload at least one receipt first.", "error");
+      return;
+    }
+
     setOcrLoading(true);
-    const formData = new FormData();
-    formData.append('file', file);
+    let successCount = 0;
 
-    try {
-      const response = await fetch(`${API_URL}/lists/upload-receipt?userId=${user.userId}`, {
-        method: 'POST',
-        body: formData
-      });
-      if (!response.ok) throw new Error();
-      const data = await response.json();
-      await loadShoppingList();
-      showToast(`Scanned ${data.store} receipt successfully! Extracted ${data.items.length} items.`);
-    } catch (err) {
-      console.warn("OCR API call failed (simulating locally):", err.message);
-      
-      // Simulate high-fidelity OCR scanning locally based on filename hint
-      setTimeout(() => {
-        const isWoolworths = file.name.toLowerCase().includes('woolworths') || file.name.toLowerCase().includes('ww');
-        let parsedList = [];
-        let store = "Coles";
+    for (let file of uploadedFiles) {
+      const formData = new FormData();
+      formData.append('file', file);
 
-        if (isWoolworths) {
-          store = "Woolworths";
-          parsedList = [
-            { id: 301, itemName: "Penne Pasta", quantity: 1, packageSize: "500g" },
-            { id: 302, itemName: "Full Cream Milk", quantity: 1, packageSize: "2L" },
-            { id: 303, itemName: "De Cecco Spaghetti", quantity: 1, packageSize: "500g" },
-            { id: 304, itemName: "Cadbury Dairy Milk Chocolate Block", quantity: 1, packageSize: "180g" },
-            { id: 305, itemName: "Heinz Baked Beans", quantity: 3, packageSize: "220g" }
-          ];
-        } else {
-          parsedList = [
-            { id: 201, itemName: "Penne Pasta", quantity: 1, packageSize: "500g" },
-            { id: 202, itemName: "Full Cream Milk", quantity: 2, packageSize: "2L" },
-            { id: 203, itemName: "De Cecco Spaghetti", quantity: 1, packageSize: "500g" },
-            { id: 204, itemName: "Cadbury Dairy Milk Chocolate Block", quantity: 1, packageSize: "180g" },
-            { id: 205, itemName: "Heinz Baked Beans", quantity: 3, packageSize: "220g" }
-          ];
+      try {
+        const response = await fetch(`${API_URL}/lists/upload-receipt?userId=${user.userId}`, {
+          method: 'POST',
+          body: formData
+        });
+        if (!response.ok) throw new Error();
+        const data = await response.json();
+        successCount++;
+        const distanceStr = data.distance ? ` (Distance to store: ${data.distance.toFixed(1)} km)` : "";
+        showToast(`Scanned ${data.store} receipt successfully!${distanceStr}`);
+      } catch (err) {
+        console.warn("OCR API call failed (simulating locally):", err.message);
+
+        // Local simulation fallback: add items via POST to backend
+        const isWoolworths = file.name.toLowerCase().includes('woolworths') || file.name.toLowerCase().includes('ww') || file.name.toLowerCase().includes('woolies');
+        const store = isWoolworths ? "Woolworths" : "Coles";
+
+        // Add dummy OCR parsed items for the matching algorithm
+        const itemsToPost = isWoolworths ? [
+          { itemName: "Full Cream Milk", quantity: 1, packageSize: "2L" },
+          { itemName: "White Toast Bread", quantity: 1, packageSize: "650g" },
+          { itemName: "Bega Tasty Cheese Block", quantity: 1, packageSize: "500g" }
+        ] : [
+          { itemName: "Full Cream Milk", quantity: 2, packageSize: "2L" },
+          { itemName: "White Toast Bread", quantity: 1, packageSize: "650g" },
+          { itemName: "Western Star Butter Block Salted", quantity: 1, packageSize: "250g" }
+        ];
+
+        for (let item of itemsToPost) {
+          try {
+            await fetch(`${API_URL}/lists`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId: user.userId, itemName: item.itemName, quantity: item.quantity, packageSize: item.packageSize })
+            });
+          } catch (e) {
+            console.error("Local simulation POST failed", e);
+          }
         }
 
-        setShoppingList(parsedList);
-        setOcrLoading(false);
-        showToast(`AI OCR parsed ${store} Receipt! Extracted ${parsedList.length} items.`);
-      }, 1500);
-    } finally {
-      if (fileInputRef.current) fileInputRef.current.value = "";
+        let dist = store === "Coles" ? preferences.distanceToColesKm : preferences.distanceToWoolworthsKm;
+        successCount++;
+        showToast(`Scanned ${store} receipt successfully! (Local simulation, Distance: ${dist.toFixed(1)} km)`);
+      }
     }
-  };
 
-  const handleUploadMockReceipt = (store) => {
-    // Construct fake files to hit the backend directly (runs Python OCR microservice)
-    const filename = store === 'Coles' ? 'coles_receipt.jpg' : 'woolworths_receipt.png';
-    const fakeFile = new File(["mock_receipt_image_data"], filename, { type: "image/jpeg" });
-    processReceiptUpload(fakeFile);
+    await loadShoppingList();
+    await loadStoreRecommendations();
+    setOcrLoading(false);
+    setUploadedFiles([]);
+    showToast(`Successfully processed all ${successCount} receipts!`);
   };
 
   // 10. Checkout list & Save savings
@@ -545,14 +650,24 @@ function DashboardPage({ user, onLogout }) {
     setLoading(true);
 
     try {
+      const payload = {
+        distanceToColesKm: preferences.distanceToColesKm,
+        distanceToWoolworthsKm: preferences.distanceToWoolworthsKm,
+        fuelCostPerKm: preferences.fuelCostPerKm,
+        hasFlybuys: preferences.hasFlybuys,
+        hasEverydayRewards: preferences.hasEverydayRewards,
+        minSplitSavingThreshold: preferences.minSplitSavingThreshold
+      };
       const response = await fetch(`${API_URL}/preferences?userId=${user.userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(preferences)
+        body: JSON.stringify(payload)
       });
       if (!response.ok) throw new Error();
+      localStorage.setItem(`docket_home_address_${user.userId}`, preferences.homeAddress || 'Richmond VIC');
       showToast('Preferences updated successfully!');
     } catch {
+      localStorage.setItem(`docket_home_address_${user.userId}`, preferences.homeAddress || 'Richmond VIC');
       showToast('Preferences saved locally (offline)');
     } finally {
       setLoading(false);
@@ -645,8 +760,9 @@ function DashboardPage({ user, onLogout }) {
 
       {/* Header */}
       <header className="dash-header">
-        <div className="dash-logo" onClick={() => setActiveTab('compare')}>
-          Docket<span className="logo-dot"></span>
+        <div className="dash-logo" onClick={() => setActiveTab('compare')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Logo size={28} />
+          <span>Docket</span>
         </div>
         
         <div className="dash-user-section">
@@ -718,6 +834,12 @@ function DashboardPage({ user, onLogout }) {
             onClick={() => setActiveTab('settings')}
           >
             <Settings size={18} /> My Settings
+          </button>
+          <button 
+            className={`tab-btn ${activeTab === 'recommendations' ? 'active' : ''}`}
+            onClick={() => setActiveTab('recommendations')}
+          >
+            <Trophy size={18} /> Top Stores
           </button>
         </nav>
 
@@ -798,32 +920,57 @@ function DashboardPage({ user, onLogout }) {
                   ref={fileInputRef} 
                   onChange={handleFileChange} 
                   accept="image/*" 
+                  multiple
                   style={{ display: 'none' }} 
                 />
                 
                 {ocrLoading ? (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                     <RefreshCw size={24} className="animate-spin" style={{ animation: 'spin 1.5s linear infinite' }} />
-                    <span style={{ fontSize: '0.85rem', color: 'var(--primary)' }}>AI OCR Scanning Receipt...</span>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--primary)' }}>AI OCR Scanning Receipts...</span>
                   </div>
                 ) : (
                   <>
-                    <div onClick={() => fileInputRef.current && fileInputRef.current.click()} style={{ width: '100%' }}>
+                    <div onClick={() => fileInputRef.current && fileInputRef.current.click()} style={{ width: '100%', cursor: 'pointer' }}>
                       <ScanLine size={24} style={{ color: 'var(--primary)', marginBottom: '4px' }} />
-                      <div style={{ fontSize: '0.88rem', fontWeight: 600 }}>OCR Receipt Scan</div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Drag & drop or upload shopping receipt</div>
-                    </div>
-                    
-                    <div className="ocr-samples">
-                      <button className="btn btn-secondary ocr-sample-btn" onClick={() => handleUploadMockReceipt('Coles')}>
-                        + Coles OCR
-                      </button>
-                      <button className="btn btn-secondary ocr-sample-btn" onClick={() => handleUploadMockReceipt('Woolworths')}>
-                        + Woolies OCR
-                      </button>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 600 }}>+ Upload Receipts</div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Select multiple receipt images or documents</div>
                     </div>
                   </>
                 )}
+              </div>
+
+              {/* Scan Actions & Queue */}
+              <div className="scan-actions-container" style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {uploadedFiles.length > 0 && !ocrLoading && (
+                  <div className="uploaded-files-queue glass-panel animate-slide-up" style={{ padding: '12px' }}>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--primary)', marginBottom: '8px' }}>
+                      Scan Queue ({uploadedFiles.length} file{uploadedFiles.length > 1 ? 's' : ''})
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '120px', overflowY: 'auto' }}>
+                      {uploadedFiles.map((file, idx) => (
+                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', background: 'rgba(255,255,255,0.03)', padding: '6px 8px', borderRadius: '4px' }}>
+                          <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '80%' }}>{file.name}</span>
+                          <Trash2 
+                            size={14} 
+                            style={{ color: 'var(--danger)', cursor: 'pointer' }} 
+                            onClick={() => handleRemoveFile(idx)} 
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <button 
+                  className="btn btn-primary" 
+                  onClick={handleScanDocuments} 
+                  disabled={ocrLoading || uploadedFiles.length === 0}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: 700 }}
+                >
+                  <RefreshCw size={14} className={ocrLoading ? "animate-spin" : ""} /> 
+                  {ocrLoading ? "Scanning..." : "Scan Documents"}
+                </button>
               </div>
 
               {/* Loyalty card purchase history import */}
@@ -1070,6 +1217,85 @@ function DashboardPage({ user, onLogout }) {
                       </table>
                     </div>
                   </div>
+
+                  {/* Top 5 recommended stores list */}
+                  {storeRecommendations && (
+                    <div className="glass-panel breakdown-card" style={{ marginTop: '24px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                        <Trophy size={18} style={{ color: 'var(--blue-600)' }} />
+                        <h3 style={{ margin: 0, fontSize: '1rem' }}>Top Store Recommendations (All Retailers)</h3>
+                      </div>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                        Ranked by product savings, special catalog prices, and travel distance relative to your address.
+                      </p>
+                      
+                      <div className="rec-two-col" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                        {storeRecommendations.topByWeightedSavings.slice(0, 5).map((store, idx) => {
+                          const prox = storeRecommendations.topByProximity.find(p => p.storeName === store.storeName);
+                          return (
+                            <div key={store.storeName} className={`store-rank-card ${idx === 0 ? 'store-rank-card--winner' : ''}`} style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: 'var(--bg-white)', border: '1px solid var(--divider)', borderRadius: '10px', padding: '12px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <span className={`rank-badge rank-badge--${idx + 1}`} style={{ width: '22px', height: '22px', fontSize: '0.7rem' }}>#{idx + 1}</span>
+                                  <span style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--primary)' }}>{store.storeName}</span>
+                                </div>
+                                {store.estimatedWeeklySaving > 0 ? (
+                                  <span className="savings-chip" style={{ fontSize: '0.75rem', padding: '2px 6px' }}>${store.estimatedWeeklySaving.toFixed(2)} saved</span>
+                                ) : (
+                                  <span className="savings-chip" style={{ fontSize: '0.75rem', padding: '2px 6px', background: 'rgba(100,116,139,0.1)', color: 'var(--text-muted)' }}>$0.00 saved</span>
+                                )}
+                              </div>
+
+                              {prox && (
+                                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <Navigation size={10} style={{ color: 'var(--blue-500)' }} />
+                                  <span>{prox.proximitySummary || `${prox.distanceKm} km`}</span>
+                                </div>
+                              )}
+
+                              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <MapPin size={10} style={{ color: 'var(--blue-500)' }} />
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={getStoreAddress(store.storeName)}>{getStoreAddress(store.storeName)}</span>
+                              </div>
+
+                              {store.specialDiscounts && store.specialDiscounts.length > 0 && (
+                                <div style={{ marginTop: '4px' }}>
+                                  <div style={{ fontSize: '0.7rem', color: 'var(--danger)', marginBottom: '2px', fontWeight: 'bold' }}>🏷️ Specials:</div>
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                    {store.specialDiscounts.map(d => (
+                                      <span key={d} style={{ background: 'rgba(239, 68, 68, 0.08)', color: 'var(--danger)', border: '1px solid rgba(239, 68, 68, 0.15)', padding: '1px 4px', borderRadius: '3px', fontSize: '0.65rem' }}>{d}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              <a
+                                href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(preferences.homeAddress || 'Richmond VIC')}&destination=${encodeURIComponent(getStoreAddress(store.storeName))}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  marginTop: '6px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  fontSize: '0.72rem',
+                                  padding: '4px 8px',
+                                  background: 'rgba(59, 130, 246, 0.08)',
+                                  color: 'var(--blue-600)',
+                                  border: '1px solid rgba(59, 130, 246, 0.18)',
+                                  borderRadius: '4px',
+                                  textDecoration: 'none',
+                                  width: 'fit-content'
+                                }}
+                              >
+                                <Navigation size={10} /> View in Google Maps
+                              </a>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="glass-panel" style={{ padding: '60px', textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', gap: '16px' }}>
@@ -1166,6 +1392,23 @@ function DashboardPage({ user, onLogout }) {
               
               <form className="settings-form" onSubmit={handleSavePreferences}>
                 
+                {/* Home Address */}
+                <div className="slider-group" style={{ marginBottom: '24px' }}>
+                  <div className="slider-labels" style={{ marginBottom: '8px' }}>
+                    <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <MapPin size={14} style={{ color: 'var(--blue-600)' }} /> Home Address (for Google Maps directions)
+                    </label>
+                  </div>
+                  <input 
+                    type="text" 
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border-glass)', background: 'rgba(255,255,255,0.05)', color: 'var(--primary)' }}
+                    placeholder="Enter suburb or address (e.g. Richmond VIC)"
+                    value={preferences.homeAddress || ''}
+                    onChange={(e) => setPreferences({ ...preferences, homeAddress: e.target.value })}
+                  />
+                </div>
+
                 {/* Distance Coles */}
                 <div className="slider-group">
                   <div className="slider-labels">
@@ -1280,6 +1523,271 @@ function DashboardPage({ user, onLogout }) {
                 </button>
               </form>
             </div>
+          </div>
+        )}
+
+        {/* ── Recommendations Tab ───────────────────────────────────────────── */}
+        {activeTab === 'recommendations' && (
+          <div className="view-section animate-fade-in">
+            {recommendationsLoading ? (
+              <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>
+                <RefreshCw size={32} style={{ animation: 'spin 1s linear infinite' }} />
+                <p style={{ marginTop: '12px' }}>Running 6-phase store analysis…</p>
+              </div>
+            ) : (shoppingList.length > 0 && storeRecommendations) ? (
+              <div className="recommendations-tab">
+
+                {/* Trade-Off Banner */}
+                {storeRecommendations.tradeOffNarrative && (
+                  <div className="tradeoff-banner glass-panel animate-slide-up">
+                    <Sparkles size={20} style={{ color: 'var(--blue-600)', flexShrink: 0 }} />
+                    <div>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--blue-700)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Smart Trade-Off Analysis</div>
+                      <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-charcoal)' }}>{storeRecommendations.tradeOffNarrative}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="rec-two-col">
+                  {/* ── LEFT: Top 5 by Savings ─────────────────────────────── */}
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                      <Trophy size={20} style={{ color: 'var(--blue-600)' }} />
+                      <h3 style={{ margin: 0 }}>Top Stores by Savings</h3>
+                    </div>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                      Ranked by weighted score — winning your most-purchased items counts more than winning rarely-bought ones.
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {storeRecommendations.topByWeightedSavings.map((store, idx) => {
+                        const prox = storeRecommendations.topByProximity.find(p => p.storeName === store.storeName);
+                        return (
+                          <div key={store.storeName} className={`store-rank-card glass-panel ${idx === 0 ? 'store-rank-card--winner' : ''}`} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div className="store-rank-card__header">
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <span className={`rank-badge rank-badge--${idx + 1}`}>#{idx + 1}</span>
+                                <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--primary)' }}>{store.storeName}</span>
+                              </div>
+                              {store.estimatedWeeklySaving > 0 ? (
+                                <span className="savings-chip">${store.estimatedWeeklySaving.toFixed(2)} saved</span>
+                              ) : (
+                                <span className="savings-chip" style={{ background: 'rgba(100,116,139,0.1)', color: 'var(--text-muted)' }}>$0.00 saved</span>
+                              )}
+                            </div>
+                            
+                            {/* Proximity info */}
+                            {prox && (
+                              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <Navigation size={12} style={{ color: 'var(--blue-500)' }} />
+                                <span>Distance: {prox.proximitySummary || `${prox.distanceKm} km`}</span>
+                              </div>
+                            )}
+
+                            {/* Location Address */}
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <MapPin size={12} style={{ color: 'var(--blue-500)' }} />
+                              <span>{getStoreAddress(store.storeName)}</span>
+                            </div>
+
+                            {/* Winning Products */}
+                            {store.winningProducts && store.winningProducts.length > 0 && (
+                              <div style={{ marginTop: '4px' }}>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Wins your:</div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                  {store.winningProducts.map(p => (
+                                    <span key={p} className="product-win-tag">{p}</span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Active Discounts / Specials */}
+                            {store.specialDiscounts && store.specialDiscounts.length > 0 ? (
+                              <div style={{ marginTop: '4px' }}>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--danger)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 'bold' }}>🏷️ Active Discounts:</div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                  {store.specialDiscounts.map(d => (
+                                    <span key={d} className="product-discount-tag" style={{ background: 'rgba(239, 68, 68, 0.08)', color: 'var(--danger)', border: '1px solid rgba(239, 68, 68, 0.15)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem' }}>{d}</span>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : (
+                              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '4px' }}>No active specials on your items</div>
+                            )}
+
+                            {/* Google Maps View Button */}
+                            <a
+                              href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(preferences.homeAddress || 'Richmond VIC')}&destination=${encodeURIComponent(getStoreAddress(store.storeName))}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-secondary btn-sm"
+                              style={{
+                                marginTop: '8px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                fontSize: '0.78rem',
+                                padding: '6px 12px',
+                                background: 'rgba(59, 130, 246, 0.08)',
+                                color: 'var(--blue-600)',
+                                border: '1px solid rgba(59, 130, 246, 0.18)',
+                                borderRadius: '6px',
+                                textDecoration: 'none',
+                                width: 'fit-content'
+                              }}
+                            >
+                              <Navigation size={12} /> View in Google Maps
+                            </a>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* ── RIGHT: Top 5 by Proximity ──────────────────────────── */}
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                      <MapPin size={20} style={{ color: 'var(--blue-600)' }} />
+                      <h3 style={{ margin: 0 }}>Top Stores by Distance</h3>
+                    </div>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                      Sorted by proximity to your home address.
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {storeRecommendations.topByProximity.map((store, idx) => {
+                        const savingsObj = storeRecommendations.topByWeightedSavings.find(s => s.storeName === store.storeName);
+                        return (
+                          <div key={store.storeName} className="store-rank-card glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div className="store-rank-card__header">
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <span className={`rank-badge rank-badge--${idx + 1}`}>#{idx + 1}</span>
+                                <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--primary)' }}>{store.storeName}</span>
+                              </div>
+                              <span className="proximity-chip">
+                                <MapPin size={12} /> {store.proximitySummary || `${store.distanceKm} km`}
+                              </span>
+                            </div>
+
+                            {/* Savings Info */}
+                            {savingsObj && (
+                              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <Trophy size={12} style={{ color: 'var(--blue-500)' }} />
+                                <span>Estimated Savings: <strong style={{ color: 'var(--success)' }}>${savingsObj.estimatedWeeklySaving.toFixed(2)}</strong></span>
+                              </div>
+                            )}
+
+                            {/* Location Address */}
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <MapPin size={12} style={{ color: 'var(--blue-500)' }} />
+                              <span>{getStoreAddress(store.storeName)}</span>
+                            </div>
+
+                            {/* Active Discounts / Specials */}
+                            {savingsObj && savingsObj.specialDiscounts && savingsObj.specialDiscounts.length > 0 ? (
+                              <div style={{ marginTop: '4px' }}>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--danger)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 'bold' }}>🏷️ Active Discounts:</div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                  {savingsObj.specialDiscounts.map(d => (
+                                    <span key={d} className="product-discount-tag" style={{ background: 'rgba(239, 68, 68, 0.08)', color: 'var(--danger)', border: '1px solid rgba(239, 68, 68, 0.15)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem' }}>{d}</span>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : (
+                              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '4px' }}>No active specials on your items</div>
+                            )}
+
+                            {/* Google Maps View Button */}
+                            <a
+                              href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(preferences.homeAddress || 'Richmond VIC')}&destination=${encodeURIComponent(getStoreAddress(store.storeName))}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-secondary btn-sm"
+                              style={{
+                                marginTop: '8px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                fontSize: '0.78rem',
+                                padding: '6px 12px',
+                                background: 'rgba(59, 130, 246, 0.08)',
+                                color: 'var(--blue-600)',
+                                border: '1px solid rgba(59, 130, 246, 0.18)',
+                                borderRadius: '6px',
+                                textDecoration: 'none',
+                                width: 'fit-content'
+                              }}
+                            >
+                              <Navigation size={12} /> View in Google Maps
+                            </a>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Split Shop Suggestion */}
+                {storeRecommendations.splitShopSuggestion && (
+                  <div className="split-suggestion-box glass-panel animate-slide-up">
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                      <ArrowRight size={20} style={{ color: 'var(--blue-600)', flexShrink: 0, marginTop: '2px' }} />
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--primary)', marginBottom: '6px' }}>
+                          💡 Split-Shop Opportunity
+                        </div>
+                        <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-charcoal)', lineHeight: 1.5 }}>
+                          {storeRecommendations.splitShopSuggestion.narrative}
+                        </p>
+                        <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                          {storeRecommendations.splitShopSuggestion.primaryItems.map(p => (
+                            <span key={p} className="product-win-tag product-win-tag--split">{p}</span>
+                          ))}
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', alignSelf: 'center' }}>
+                            → at {storeRecommendations.splitShopSuggestion.primaryStore}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Product Rankings breakdown */}
+                <div className="glass-panel" style={{ marginTop: '24px', padding: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                    <Star size={18} style={{ color: 'var(--blue-600)' }} />
+                    <h3 style={{ margin: 0, fontSize: '1rem' }}>Your Product Purchase Rankings</h3>
+                  </div>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                    Based on your shopping history. Equal frequency = same rank. Rank 1 drives the recommendation most.
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {storeRecommendations.productRankings.slice(0, 8).map(p => (
+                      <div key={p.productName} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--blue-50)', borderRadius: '8px', border: '1px solid var(--divider)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span className={`rank-badge rank-badge--${Math.min(p.rank, 5)}`}>#{p.rank}</span>
+                          <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-charcoal)' }}>{p.productName}</span>
+                        </div>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{p.occurrences} purchase{p.occurrences !== 1 ? 's' : ''}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    className="btn btn-secondary"
+                    style={{ marginTop: '16px', fontSize: '0.85rem', height: '36px', padding: '0 16px' }}
+                    onClick={loadStoreRecommendations}
+                    disabled={recommendationsLoading}
+                  >
+                    <RefreshCw size={14} /> Refresh Analysis
+                  </button>
+                </div>
+
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '80px', color: 'var(--text-muted)' }}>
+                <Trophy size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
+                <p>Add items to your shopping list and upload receipts to generate your personalised store ranking.</p>
+              </div>
+            )}
           </div>
         )}
       </div>

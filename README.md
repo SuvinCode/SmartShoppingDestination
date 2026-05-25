@@ -8,12 +8,12 @@ The project features a **C# ASP.NET Core** backend, a **Python FastAPI** AI micr
 
 ## Key Features
 
-1. **Receipt OCR Scanning**: Upload a photo of a Coles or Woolworths receipt. The Python AI service extracts product names and quantities, which are fuzzy-matched against the database catalog to populate your list.
-2. **Split-Shopping Recommendations**: Docket determines if split-shopping (buying the cheapest items at both Coles and Woolworths) makes sense by checking if the extra savings exceed fuel costs and a user-defined savings threshold.
-3. **Smart Autocomplete Search**: Autocompletes generic product names and standard pack sizes (e.g. "Devondale Full Cream Milk 2L") rather than store-branded lines, making basket comparison seamless.
-4. **Loyalty Card Valuations**: Integrates Flybuys (Coles) and Everyday Rewards (Woolworths) points values into calculations. Points are converted to cash equivalent offsets (0.5% point rebates + special bonus points) and deducted from totals.
-5. **Distance & Fuel Cost Adjustment**: Factoring in true transportation overheads (Distance in km × 2 × Fuel cost/km) so users know their real bottom-line cost before leaving home.
-6. **Savings analytics Dashboard**: View cumulative savings, total spent, and average savings over time via custom interactive SVG charts and shopping logs.
+1. **Receipt Upload & Data Extraction**: When a user uploads a receipt photo, an OCR model extracts names, quantities, and prices, which ML normalizes (e.g. "WW CHKN BRST 500G" to "Chicken Breast 500g") and builds a personalized purchasing profile.
+2. **Price Intelligence Layer**: Ingests weekly catalog data from Coles and Woolworths to calculate personalized basket totals, predict special discount cycles, recommend equivalent substitute items, and highlight store price sensitivity.
+3. **Google Maps Integration**: Locates the closest stores with real-time drive times and distance. Incorporates transportation fuel overheads and plots optimal route directions for multi-stop split-shopping trips.
+4. **The Data Flywheel**: Compounds saving accuracy over a 4-to-6-week receipt upload cycle, feeding anonymized, aggregated regional price matches back into the matching database.
+5. **Modern Tech Stack**: Integrated via Google Vision API / AWS Textract for OCR scanning, RapidFuzz string normalization, and the Google Maps Platform for geolocated routes.
+6. **Top-5 Store Ranking Engine**: A 6-phase algorithm that analyses receipt purchase history, ranks all 5 major Australian supermarkets (Coles, Woolworths, Aldi, IGA, Costco) by a weighted savings score (factoring in active specials and item-level discount mapping), layers in a proximity ranking, and outputs a combined trade-off recommendation with optional split-shop routing. Also returns geolocated distance to stores on receipt upload.
 
 ---
 

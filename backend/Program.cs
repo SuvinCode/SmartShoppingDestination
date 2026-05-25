@@ -12,8 +12,9 @@ builder.Services.AddDbContext<DocketDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=../docket.db"));
 
 // Register Services
-builder.Services.AddHttpClient<PythonAIServiceClient>();
-builder.Services.AddScoped<ComparisonEngine>();
+builder.Services.AddHttpClient<IPythonAIServiceClient, PythonAIServiceClient>();
+builder.Services.AddScoped<IComparisonEngine, ComparisonEngine>();
+builder.Services.AddScoped<IStoreRecommendationEngine, StoreRecommendationEngine>();
 
 // Configure CORS for Vite React Frontend
 builder.Services.AddCors(options =>

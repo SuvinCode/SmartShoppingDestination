@@ -11,7 +11,7 @@
 .auth-card {
   width: 100%;
   max-width: 420px;
-  padding: 32px; /* 32px padding */
+  padding: 32px;
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -20,7 +20,12 @@
   background-color: var(--bg-white);
   border: 1px solid var(--divider);
   border-radius: 12px;
-  box-shadow: none; /* flat trustworthy surface */
+  box-shadow: 0 4px 20px rgba(12, 45, 94, 0.05);
+  transition: all var(--transition-normal);
+}
+
+.auth-card:hover {
+  border-color: var(--blue-300);
 }
 
 .auth-header {
@@ -46,7 +51,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background-color: var(--interactive);
+  background-color: var(--blue-500);
   display: inline-block;
 }
 
@@ -84,7 +89,7 @@
 /* Warnings and errors - NO red */
 .auth-error {
   background-color: var(--bg-ice);
-  border: 1px solid var(--primary);
+  border: 1px solid var(--blue-400);
   color: var(--primary);
   font-size: 14px;
   padding: 12px;
@@ -121,9 +126,9 @@
 .demo-login-btn {
   width: 100%;
   height: 48px;
-  border: 1px solid var(--primary);
+  border: 1px solid var(--blue-700);
   background-color: var(--bg-white);
-  color: var(--primary);
+  color: var(--blue-700);
   font-family: var(--font-heading);
   font-weight: 700;
   display: inline-flex;
@@ -136,11 +141,18 @@
 }
 
 .demo-login-btn:hover {
-  background-color: var(--bg-ice);
+  background-color: var(--blue-50);
+  border-color: var(--blue-800);
+  color: var(--blue-800);
+  transform: translateY(-1px);
+}
+
+.demo-login-btn:active {
+  transform: translateY(0);
 }
 
 .demo-login-btn svg {
-  color: var(--primary);
+  color: var(--blue-700);
   width: 20px;
   height: 20px;
 }

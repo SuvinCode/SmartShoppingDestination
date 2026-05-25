@@ -1,18 +1,32 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 
 :root {
-  /* Color Palette */
-  --primary: #0C2D5E;           /* Deep Navy Blue */
-  --interactive: #1A7FDB;       /* Bright Sky Blue */
-  --bg-ice: #E8F2FC;            /* Soft Ice Blue */
-  --bg-white: #FFFFFF;          /* White */
-  --savings-green: #2D9B5A;     /* Warm Green */
-  --savings-bg-tint: #E8F7EE;   /* Green background tint */
-  --bg-page: #F4F5F7;           /* Light Grey */
-  --divider: #E4E7EC;           /* Divider Line */
-  --text-charcoal: #1C1C2E;     /* Dark Charcoal body text */
-  --text-muted: #667085;        /* Muted supporting text */
-  --border-input: #D0D5DD;      /* Input border */
+  /* Color Palette - Vibrant Shades of Blue */
+  --blue-950: #040d1e;           /* Deep space blue */
+  --blue-900: #0c2d5e;           /* Rich navy blue (Primary) */
+  --blue-800: #154284;           /* Deep royal blue */
+  --blue-700: #1a58af;           /* Vivid mid blue */
+  --blue-600: #1a7fdb;           /* Bright sky blue (Interactive) */
+  --blue-500: #429af2;           /* Bright electric blue */
+  --blue-400: #71b4f7;           /* Medium sky blue */
+  --blue-300: #a5d0fa;           /* Soft ice blue accent */
+  --blue-200: #cce4fc;           /* Clear ice blue */
+  --blue-100: #e8f2fc;           /* Ice blue surface tint */
+  --blue-50: #f4f8fd;            /* Light ice background base */
+  
+  --primary: var(--blue-900);
+  --interactive: var(--blue-600);
+  --bg-ice: var(--blue-100);
+  --bg-white: #ffffff;
+  
+  --savings-green: #2d9b5a;
+  --savings-bg-tint: #e8f7ee;
+  
+  --bg-page: var(--blue-50);     /* Soft tinted background instead of light grey */
+  --divider: #dbe4ef;            /* Slightly blue tinted divider */
+  --text-charcoal: #1c2434;      /* Dark charcoal with slight blue tint */
+  --text-muted: #5e6d87;         /* Supporting text with blue-grey tint */
+  --border-input: #b8c9df;       /* Tinted input border */
   --success: var(--savings-green);
   --success-glow: var(--savings-bg-tint);
   
@@ -35,6 +49,11 @@
 body {
   font-family: var(--font-body);
   background-color: var(--bg-page);
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(220, 235, 252, 0.4) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(232, 242, 252, 0.4) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(244, 248, 253, 0.3) 0px, transparent 100%);
+  background-attachment: fixed;
   color: var(--text-charcoal);
   min-height: 100vh;
   line-height: 1.5;
@@ -78,41 +97,46 @@ h3 {
   }
 }
 
-/* Flat Trust Cards */
+/* Flat Trust Cards with Hover Depth */
 .glass-panel {
   background-color: var(--bg-white);
   border: 1px solid var(--divider);
   border-radius: 12px;
-  padding: 16px; /* 16px internal padding */
-  box-shadow: none; /* Flat surfaces feel more trustworthy */
-  transition: border-color var(--transition-normal), background-color var(--transition-normal);
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(12, 45, 94, 0.02);
+  transition: all var(--transition-normal);
+}
+
+.glass-panel:hover {
+  border-color: var(--blue-300);
+  box-shadow: 0 4px 12px rgba(12, 45, 94, 0.05);
 }
 
 /* Form inputs styling */
 .glass-input {
   background-color: var(--bg-white);
   border: 1px solid var(--border-input);
-  border-radius: 12px; /* 12px radius */
+  border-radius: 12px;
   color: var(--text-charcoal);
   padding: 12px 16px;
   font-family: var(--font-body);
-  font-size: 16px; /* 16px regular body */
+  font-size: 16px;
   font-weight: 400;
   outline: none;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: all var(--transition-fast);
 }
 
 .glass-input:focus {
-  border-color: var(--interactive);
-  box-shadow: 0 0 0 3px rgba(26, 127, 219, 0.15); /* Sky blue focus ring */
+  border-color: var(--blue-500);
+  box-shadow: 0 0 0 3px rgba(66, 154, 242, 0.18);
 }
 
 .glass-input::placeholder {
   color: var(--text-muted);
-  font-size: 14px; /* 14px supporting */
+  font-size: 14px;
 }
 
-/* Buttons */
+/* Buttons with Gradient Depth */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -120,22 +144,24 @@ h3 {
   gap: 8px;
   font-family: var(--font-heading);
   font-size: 16px;
-  font-weight: 700; /* 700 weight for CTA only */
-  border-radius: 8px; /* 8px border radius */
+  font-weight: 700;
+  border-radius: 8px;
   border: none;
   cursor: pointer;
-  height: 48px; /* 48px height */
+  height: 48px;
   transition: all var(--transition-fast);
 }
 
 .btn-primary {
-  background-color: var(--interactive); /* sky blue */
+  background: linear-gradient(135deg, var(--blue-600) 0%, var(--blue-800) 100%);
   color: var(--bg-white);
   padding: 0 24px;
+  box-shadow: 0 2px 8px rgba(26, 95, 188, 0.15);
 }
 
 .btn-primary:hover {
-  background-color: #156ebf;
+  background: linear-gradient(135deg, var(--blue-500) 0%, var(--blue-700) 100%);
+  box-shadow: 0 4px 12px rgba(26, 95, 188, 0.25);
   transform: translateY(-1px);
 }
 
@@ -145,13 +171,15 @@ h3 {
 
 .btn-secondary {
   background-color: var(--bg-white);
-  border: 1px solid var(--primary); /* 1px navy border */
-  color: var(--primary); /* navy text */
+  border: 1px solid var(--blue-700);
+  color: var(--blue-700);
   padding: 0 24px;
 }
 
 .btn-secondary:hover {
-  background-color: var(--bg-ice);
+  background-color: var(--blue-50);
+  border-color: var(--blue-800);
+  color: var(--blue-800);
   transform: translateY(-1px);
 }
 

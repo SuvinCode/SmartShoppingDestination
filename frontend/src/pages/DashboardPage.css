@@ -11,14 +11,14 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 24px; /* 16px (2x8px) padding */
+  padding: 16px 24px;
   border-bottom: 1px solid var(--divider);
-  background-color: var(--bg-white);
+  background: linear-gradient(to right, var(--bg-white) 0%, var(--blue-50) 100%);
 }
 
 .dash-logo {
   font-family: var(--font-heading);
-  font-size: 22px; /* dm sans section heading */
+  font-size: 22px;
   font-weight: 700;
   color: var(--primary);
   display: flex;
@@ -31,14 +31,14 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background-color: var(--interactive);
+  background-color: var(--blue-500);
   display: inline-block;
 }
 
 .dash-user-section {
   display: flex;
   align-items: center;
-  gap: 24px; /* 24px (3x8px) spacing */
+  gap: 24px;
 }
 
 /* Outlined Notification Bell */
@@ -51,14 +51,14 @@
 }
 
 .notifications-bell:hover {
-  color: var(--interactive);
+  color: var(--blue-600);
 }
 
 .bell-badge {
   position: absolute;
   top: -2px;
   right: -2px;
-  background-color: var(--interactive); /* no red: blue meaning structural notify */
+  background-color: var(--blue-500);
   width: 6px;
   height: 6px;
   border-radius: 50%;
@@ -70,17 +70,18 @@
   gap: 8px;
   padding: 8px 16px;
   border-radius: 20px;
-  background-color: var(--bg-ice);
-  border: 1px solid var(--divider);
-  color: var(--primary);
+  background-color: var(--blue-100);
+  border: 1px solid var(--blue-200);
+  color: var(--blue-800);
   font-family: var(--font-body);
   font-size: 14px;
+  font-weight: 500;
 }
 
 .user-profile-badge svg {
   width: 20px;
   height: 20px;
-  color: var(--primary);
+  color: var(--blue-800);
 }
 
 /* Dashboard Main Content */
@@ -88,7 +89,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 32px 0; /* 32px (4x8px) padding */
+  padding: 32px 0;
 }
 
 /* Tabs Navigation */
@@ -117,14 +118,14 @@
 }
 
 .tab-btn:hover {
-  color: var(--primary);
-  background-color: var(--bg-ice);
+  color: var(--blue-800);
+  background-color: var(--blue-100);
 }
 
 .tab-btn.active {
-  color: var(--primary);
+  color: var(--blue-800);
   background-color: var(--bg-white);
-  border: 1px solid var(--divider);
+  border: 1px solid var(--blue-200);
   border-bottom-color: transparent;
   margin-bottom: -9px;
   border-radius: 8px 8px 0 0;
@@ -369,21 +370,22 @@
 /* Recommendation Hero Banner */
 .recommendation-banner {
   padding: 24px;
-  background-color: var(--bg-white);
-  border: 1px solid var(--divider);
+  background: linear-gradient(135deg, var(--bg-white) 0%, var(--blue-50) 100%);
+  border: 1px solid var(--blue-200);
   border-radius: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  box-shadow: 0 4px 12px rgba(12, 45, 94, 0.03);
 }
 
 .rec-badge {
   font-size: 12px;
-  background-color: var(--bg-ice);
+  background-color: var(--blue-200);
   padding: 4px 12px;
   border-radius: 12px;
-  color: var(--primary);
-  font-weight: 500;
+  color: var(--blue-900);
+  font-weight: 600;
   margin-bottom: 8px;
   display: inline-block;
 }
@@ -414,7 +416,7 @@
 }
 
 .store-option-card {
-  padding: 16px;
+  padding: 20px;
   border-radius: 12px;
   border: 1px solid var(--divider);
   display: flex;
@@ -424,9 +426,16 @@
   transition: all var(--transition-normal);
 }
 
+.store-option-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--blue-300);
+  box-shadow: 0 6px 16px rgba(12, 45, 94, 0.05);
+}
+
 .store-option-card.winner {
-  border-color: var(--interactive);
-  background-color: var(--bg-ice);
+  border-color: var(--blue-500);
+  background: linear-gradient(135deg, var(--blue-50) 0%, rgba(204, 228, 252, 0.4) 100%);
+  box-shadow: 0 4px 16px rgba(26, 127, 219, 0.08);
 }
 
 .store-option-header {
@@ -469,14 +478,19 @@
   justify-content: space-between;
   align-items: center;
   padding: 16px;
-  background-color: var(--bg-ice);
-  border: 1px solid var(--divider);
+  background: linear-gradient(135deg, var(--blue-50) 0%, rgba(204, 228, 252, 0.25) 100%);
+  border: 1px solid var(--blue-200);
   border-radius: 12px;
+  transition: all var(--transition-normal);
+}
+
+.split-shop-selector:hover {
+  border-color: var(--blue-400);
 }
 
 .split-shop-selector label {
   color: var(--primary);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 /* Comparison Breakdown Table */
@@ -741,3 +755,141 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   Recommendations Tab — Top-5 Store Engine UI
+   ══════════════════════════════════════════════════════════════════ */
+
+.recommendations-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Trade-off banner at the top */
+.tradeoff-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px 22px;
+  background: linear-gradient(135deg, var(--blue-50) 0%, var(--bg-white) 100%);
+  border: 1px solid var(--blue-300);
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(12, 45, 94, 0.05);
+}
+
+/* Two-column layout: savings list | proximity list */
+.rec-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+}
+
+@media (max-width: 860px) {
+  .rec-two-col {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Individual store rank card */
+.store-rank-card {
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--divider);
+  background: var(--bg-white);
+  transition: all var(--transition-normal);
+}
+
+.store-rank-card:hover {
+  border-color: var(--blue-300);
+  box-shadow: 0 4px 12px rgba(12, 45, 94, 0.06);
+  transform: translateY(-1px);
+}
+
+.store-rank-card--winner {
+  border-color: var(--blue-500);
+  background: linear-gradient(135deg, var(--blue-50) 0%, var(--bg-white) 100%);
+  box-shadow: 0 4px 16px rgba(26, 127, 219, 0.10);
+}
+
+.store-rank-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Numbered rank badges — gold, silver, bronze, then blue */
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.rank-badge--1 { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; }
+.rank-badge--2 { background: linear-gradient(135deg, #9ca3af, #6b7280); color: #fff; }
+.rank-badge--3 { background: linear-gradient(135deg, #b45309, #92400e); color: #fff; }
+.rank-badge--4, .rank-badge--5 { background: var(--blue-100); color: var(--blue-800); }
+
+/* Green savings chip */
+.savings-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  background-color: rgba(45, 155, 90, 0.12);
+  color: var(--savings-green);
+  border: 1px solid rgba(45, 155, 90, 0.25);
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Blue proximity chip */
+.proximity-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background-color: var(--blue-100);
+  color: var(--blue-800);
+  border: 1px solid var(--blue-200);
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Product-win tags (e.g. "Full Cream Milk 2L") */
+.product-win-tag {
+  display: inline-block;
+  padding: 3px 9px;
+  background-color: var(--blue-50);
+  color: var(--blue-800);
+  border: 1px solid var(--blue-200);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.product-win-tag--split {
+  background-color: rgba(45, 155, 90, 0.1);
+  color: var(--savings-green);
+  border-color: rgba(45, 155, 90, 0.2);
+}
+
+/* Split-shop suggestion box */
+.split-suggestion-box {
+  padding: 18px 22px;
+  background: linear-gradient(135deg, rgba(45, 155, 90, 0.06) 0%, var(--bg-white) 100%);
+  border: 1px solid rgba(45, 155, 90, 0.25);
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(45, 155, 90, 0.05);
+}
+

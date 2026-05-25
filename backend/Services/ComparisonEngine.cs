@@ -6,7 +6,7 @@ using backend.Models;
 
 namespace backend.Services
 {
-    public class ComparisonEngine
+    public class ComparisonEngine : IComparisonEngine
     {
         private readonly DocketDbContext _context;
 
@@ -17,8 +17,6 @@ namespace backend.Services
 
         public ComparisonResult CompareList(List<ShoppingListItem> listItems, UserPreferences prefs)
         {
-            var result = new ComparisonResult();
-            
             // Get all catalog items to search
             var catalog = _context.CatalogItems.ToList();
             var colesCatalog = catalog.Where(i => i.Store == "Coles").ToList();
@@ -29,71 +27,25 @@ namespace backend.Services
             
             foreach (var listItem in listItems)
             {
-                // Match items by name / category (case insensitive)
                 var query = listItem.ItemName.ToLower();
                 
-                // Find best Coles match
                 var colesMatch = FindBestMatch(query, colesCatalog);
-                // Find best Woolworths match
                 var woolworthsMatch = FindBestMatch(query, woolworthsCatalog);
 
                 if (colesMatch != null)
                 {
-                    colesMatched.Add(new MatchedBasketItem
-                    {
-                        ListItemId = listItem.Id,
-                        SearchQuery = listItem.ItemName,
-                        MatchedItem = colesMatch,
-                        Quantity = listItem.Quantity,
-                        TotalPrice = colesMatch.ShelfPrice * listItem.Quantity,
-                        NormalPrice = colesMatch.NormalPrice * listItem.Quantity,
-                        IsSpecial = colesMatch.IsSpecial,
-                        SpecialDetails = colesMatch.SpecialDetails
-                    });
+                    colesMatched.Add(new MatchedBasketItem(listItem.Id, listItem.ItemName, colesMatch, listItem.Quantity));
                 }
                 
                 if (woolworthsMatch != null)
                 {
-                    woolworthsMatched.Add(new MatchedBasketItem
-                    {
-                        ListItemId = listItem.Id,
-                        SearchQuery = listItem.ItemName,
-                        MatchedItem = woolworthsMatch,
-                        Quantity = listItem.Quantity,
-                        TotalPrice = woolworthsMatch.ShelfPrice * listItem.Quantity,
-                        NormalPrice = woolworthsMatch.NormalPrice * listItem.Quantity,
-                        IsSpecial = woolworthsMatch.IsSpecial,
-                        SpecialDetails = woolworthsMatch.SpecialDetails
-                    });
+                    woolworthsMatched.Add(new MatchedBasketItem(listItem.Id, listItem.ItemName, woolworthsMatch, listItem.Quantity));
                 }
             }
 
-            // Calculate Coles single store costs
-            decimal colesShelfTotal = colesMatched.Sum(i => i.TotalPrice);
-            decimal colesNormalTotal = colesMatched.Sum(i => i.NormalPrice);
-            decimal colesFuelCost = (decimal)(prefs.DistanceToColesKm * 2) * prefs.FuelCostPerKm;
-            decimal colesRewardsValue = prefs.HasFlybuys ? colesShelfTotal * 0.005M : 0; // 0.5% back
-            // Add bonus points for specials (simulate 50 points per special = $0.25)
-            if (prefs.HasFlybuys)
-            {
-                int specialCount = colesMatched.Count(i => i.IsSpecial);
-                colesRewardsValue += specialCount * 0.25M;
-            }
-            decimal colesAdjustedTotal = colesShelfTotal + colesFuelCost - colesRewardsValue;
-            double colesStockRisk = 100.0 * (1.0 - colesMatched.Select(i => 1.0 - i.MatchedItem.OutOfStockProbability).Aggregate(1.0, (acc, p) => acc * p));
-
-            // Calculate Woolworths single store costs
-            decimal woolworthsShelfTotal = woolworthsMatched.Sum(i => i.TotalPrice);
-            decimal woolworthsNormalTotal = woolworthsMatched.Sum(i => i.NormalPrice);
-            decimal woolworthsFuelCost = (decimal)(prefs.DistanceToWoolworthsKm * 2) * prefs.FuelCostPerKm;
-            decimal woolworthsRewardsValue = prefs.HasEverydayRewards ? woolworthsShelfTotal * 0.005M : 0; // 0.5% back
-            if (prefs.HasEverydayRewards)
-            {
-                int specialCount = woolworthsMatched.Count(i => i.IsSpecial);
-                woolworthsRewardsValue += specialCount * 0.25M;
-            }
-            decimal woolworthsAdjustedTotal = woolworthsShelfTotal + woolworthsFuelCost - woolworthsRewardsValue;
-            double woolworthsStockRisk = 100.0 * (1.0 - woolworthsMatched.Select(i => 1.0 - i.MatchedItem.OutOfStockProbability).Aggregate(1.0, (acc, p) => acc * p));
+            // Encapsulate Coles and Woolworths option totals
+            var colesResult = new StoreOptionResult("Coles", colesMatched, prefs);
+            var woolworthsResult = new StoreOptionResult("Woolworths", woolworthsMatched, prefs);
 
             // Calculate Split Shop option
             var splitColesBasket = new List<MatchedBasketItem>();
@@ -106,14 +58,11 @@ namespace backend.Services
 
                 if (colesItem != null && woolworthsItem != null)
                 {
-                    // Compare unit prices if packaging differs, otherwise shelf prices
                     decimal colesUnitCost = colesItem.MatchedItem.ShelfPrice / (decimal)colesItem.MatchedItem.UnitQuantity;
                     decimal woolworthsUnitCost = woolworthsItem.MatchedItem.ShelfPrice / (decimal)woolworthsItem.MatchedItem.UnitQuantity;
 
-                    // If unit quantities are different (e.g. 500g vs 1kg), normalize
                     if (colesItem.MatchedItem.PackageSize != woolworthsItem.MatchedItem.PackageSize)
                     {
-                        // We compare by normalized unit price
                         if (colesUnitCost <= woolworthsUnitCost)
                         {
                             splitColesBasket.Add(colesItem);
@@ -125,7 +74,6 @@ namespace backend.Services
                     }
                     else
                     {
-                        // Same size, compare direct price
                         if (colesItem.TotalPrice <= woolworthsItem.TotalPrice)
                         {
                             splitColesBasket.Add(colesItem);
@@ -146,107 +94,24 @@ namespace backend.Services
                 }
             }
 
-            decimal splitShelfTotal = splitColesBasket.Sum(i => i.TotalPrice) + splitWoolworthsBasket.Sum(i => i.TotalPrice);
-            decimal splitNormalTotal = splitColesBasket.Sum(i => i.NormalPrice) + splitWoolworthsBasket.Sum(i => i.NormalPrice);
-            decimal splitFuelCost = (decimal)(prefs.DistanceToColesKm * 2 + prefs.DistanceToWoolworthsKm * 2) * prefs.FuelCostPerKm;
-            
-            decimal splitColesRewards = prefs.HasFlybuys ? splitColesBasket.Sum(i => i.TotalPrice) * 0.005M + splitColesBasket.Count(i => i.IsSpecial) * 0.25M : 0M;
-            decimal splitWoolworthsRewards = prefs.HasEverydayRewards ? splitWoolworthsBasket.Sum(i => i.TotalPrice) * 0.005M + splitWoolworthsBasket.Count(i => i.IsSpecial) * 0.25M : 0M;
-            decimal splitRewardsValue = splitColesRewards + splitWoolworthsRewards;
-
-            decimal splitAdjustedTotal = splitShelfTotal + splitFuelCost - splitRewardsValue;
-            
             var allSplitItems = splitColesBasket.Concat(splitWoolworthsBasket).ToList();
-            double splitStockRisk = 100.0 * (1.0 - allSplitItems.Select(i => 1.0 - i.MatchedItem.OutOfStockProbability).Aggregate(1.0, (acc, p) => acc * p));
+            var splitResult = new StoreOptionResult("Split Shop", allSplitItems, prefs);
 
-            // Populate single store details
-            result.Coles = new StoreOptionResult
-            {
-                StoreName = "Coles",
-                BasketItems = colesMatched,
-                ShelfTotal = colesShelfTotal,
-                NormalTotal = colesNormalTotal,
-                FuelAdjustment = colesFuelCost,
-                RewardsValue = colesRewardsValue,
-                AdjustedTotal = colesAdjustedTotal,
-                StockRiskPercentage = Math.Round(colesStockRisk, 1),
-                SpecialsCount = colesMatched.Count(i => i.IsSpecial)
-            };
-
-            result.Woolworths = new StoreOptionResult
-            {
-                StoreName = "Woolworths",
-                BasketItems = woolworthsMatched,
-                ShelfTotal = woolworthsShelfTotal,
-                NormalTotal = woolworthsNormalTotal,
-                FuelAdjustment = woolworthsFuelCost,
-                RewardsValue = woolworthsRewardsValue,
-                AdjustedTotal = woolworthsAdjustedTotal,
-                StockRiskPercentage = Math.Round(woolworthsStockRisk, 1),
-                SpecialsCount = woolworthsMatched.Count(i => i.IsSpecial)
-            };
-
-            result.Split = new StoreOptionResult
-            {
-                StoreName = "Split Shop",
-                BasketItems = allSplitItems, // all items combined
-                ShelfTotal = splitShelfTotal,
-                NormalTotal = splitNormalTotal,
-                FuelAdjustment = splitFuelCost,
-                RewardsValue = splitRewardsValue,
-                AdjustedTotal = splitAdjustedTotal,
-                StockRiskPercentage = Math.Round(splitStockRisk, 1),
-                SpecialsCount = allSplitItems.Count(i => i.IsSpecial)
-            };
-
-            result.SplitColesBasket = splitColesBasket;
-            result.SplitWoolworthsBasket = splitWoolworthsBasket;
-
-            // Determine the single store winner (based on AdjustedTotal)
-            string bestSingleStore = colesAdjustedTotal <= woolworthsAdjustedTotal ? "Coles" : "Woolworths";
-            decimal bestSingleTotal = colesAdjustedTotal <= woolworthsAdjustedTotal ? colesAdjustedTotal : woolworthsAdjustedTotal;
-            decimal worstSingleTotal = colesAdjustedTotal > woolworthsAdjustedTotal ? colesAdjustedTotal : woolworthsAdjustedTotal;
-
-            result.SingleStoreWinner = bestSingleStore;
-            result.SingleStoreSavings = Math.Max(0, worstSingleTotal - bestSingleTotal);
-
-            // Determine if Split Shop is viable (does it save more than the best single store?)
-            decimal splitSavingVsBestSingle = bestSingleTotal - splitAdjustedTotal;
-
-            if (splitSavingVsBestSingle > prefs.MinSplitSavingThreshold && splitColesBasket.Count > 0 && splitWoolworthsBasket.Count > 0)
-            {
-                result.WinnerStore = "Split Shop";
-                result.TotalSavings = worstSingleTotal - splitAdjustedTotal;
-                result.SplitExtraSavings = splitSavingVsBestSingle;
-                result.IsSplitRecommended = true;
-            }
-            else
-            {
-                result.WinnerStore = bestSingleStore;
-                result.TotalSavings = result.SingleStoreSavings;
-                result.SplitExtraSavings = Math.Max(0, splitSavingVsBestSingle);
-                result.IsSplitRecommended = false;
-            }
-
-            return result;
+            // Return consolidated comparison result (which encapsulates the winning store selection)
+            return new ComparisonResult(colesResult, woolworthsResult, splitResult, splitColesBasket, splitWoolworthsBasket, prefs);
         }
 
         private CatalogItem? FindBestMatch(string query, List<CatalogItem> items)
         {
-            // Simple exact/substring matching:
-            // 1. Check for exact name match
             var exact = items.FirstOrDefault(i => i.Name.ToLower() == query);
             if (exact != null) return exact;
 
-            // 2. Check if query is contained in item name
             var substring = items.FirstOrDefault(i => i.Name.ToLower().Contains(query));
             if (substring != null) return substring;
 
-            // 3. Match by category (if category name is inside query or query matches category)
             var category = items.FirstOrDefault(i => i.Category.ToLower() == query || query.Contains(i.Category.ToLower()));
             if (category != null) return category;
 
-            // 4. Try split words matching
             var queryWords = query.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (queryWords.Length > 0)
             {
@@ -266,43 +131,134 @@ namespace backend.Services
 
     public class ComparisonResult
     {
-        public string WinnerStore { get; set; } = ""; // "Coles", "Woolworths", or "Split Shop"
-        public string SingleStoreWinner { get; set; } = ""; // "Coles" or "Woolworths"
-        public decimal TotalSavings { get; set; }
-        public decimal SingleStoreSavings { get; set; }
-        public decimal SplitExtraSavings { get; set; }
-        public bool IsSplitRecommended { get; set; }
+        public string WinnerStore { get; private set; } = ""; // "Coles", "Woolworths", or "Split Shop"
+        public string SingleStoreWinner { get; private set; } = ""; // "Coles" or "Woolworths"
+        public decimal TotalSavings { get; private set; }
+        public decimal SingleStoreSavings { get; private set; }
+        public decimal SplitExtraSavings { get; private set; }
+        public bool IsSplitRecommended { get; private set; }
         
-        public StoreOptionResult Coles { get; set; } = new();
-        public StoreOptionResult Woolworths { get; set; } = new();
-        public StoreOptionResult Split { get; set; } = new();
+        public StoreOptionResult Coles { get; private set; } = null!;
+        public StoreOptionResult Woolworths { get; private set; } = null!;
+        public StoreOptionResult Split { get; private set; } = null!;
 
-        public List<MatchedBasketItem> SplitColesBasket { get; set; } = new();
-        public List<MatchedBasketItem> SplitWoolworthsBasket { get; set; } = new();
+        public List<MatchedBasketItem> SplitColesBasket { get; private set; } = new();
+        public List<MatchedBasketItem> SplitWoolworthsBasket { get; private set; } = new();
+
+        private ComparisonResult() { }
+
+        public ComparisonResult(StoreOptionResult coles, StoreOptionResult woolies, StoreOptionResult split, List<MatchedBasketItem> splitColes, List<MatchedBasketItem> splitWoolies, UserPreferences prefs)
+        {
+            Coles = coles ?? throw new ArgumentNullException(nameof(coles));
+            Woolworths = woolies ?? throw new ArgumentNullException(nameof(woolies));
+            Split = split ?? throw new ArgumentNullException(nameof(split));
+            SplitColesBasket = splitColes ?? new();
+            SplitWoolworthsBasket = splitWoolies ?? new();
+
+            SingleStoreWinner = Coles.AdjustedTotal <= Woolworths.AdjustedTotal ? "Coles" : "Woolworths";
+            decimal bestSingleTotal = Coles.AdjustedTotal <= Woolworths.AdjustedTotal ? Coles.AdjustedTotal : Woolworths.AdjustedTotal;
+            decimal worstSingleTotal = Coles.AdjustedTotal > Woolworths.AdjustedTotal ? Coles.AdjustedTotal : Woolworths.AdjustedTotal;
+
+            SingleStoreSavings = Math.Max(0, worstSingleTotal - bestSingleTotal);
+
+            decimal splitSavingVsBestSingle = bestSingleTotal - Split.AdjustedTotal;
+
+            if (splitSavingVsBestSingle > prefs.MinSplitSavingThreshold && SplitColesBasket.Count > 0 && SplitWoolworthsBasket.Count > 0)
+            {
+                WinnerStore = "Split Shop";
+                TotalSavings = worstSingleTotal - Split.AdjustedTotal;
+                SplitExtraSavings = splitSavingVsBestSingle;
+                IsSplitRecommended = true;
+            }
+            else
+            {
+                WinnerStore = SingleStoreWinner;
+                TotalSavings = SingleStoreSavings;
+                SplitExtraSavings = Math.Max(0, splitSavingVsBestSingle);
+                IsSplitRecommended = false;
+            }
+        }
     }
 
     public class StoreOptionResult
     {
-        public string StoreName { get; set; } = "";
-        public List<MatchedBasketItem> BasketItems { get; set; } = new();
-        public decimal ShelfTotal { get; set; }
-        public decimal NormalTotal { get; set; }
-        public decimal FuelAdjustment { get; set; }
-        public decimal RewardsValue { get; set; }
-        public decimal AdjustedTotal { get; set; }
-        public double StockRiskPercentage { get; set; }
-        public int SpecialsCount { get; set; }
+        public string StoreName { get; private set; } = "";
+        public List<MatchedBasketItem> BasketItems { get; private set; } = new();
+        public decimal ShelfTotal { get; private set; }
+        public decimal NormalTotal { get; private set; }
+        public decimal FuelAdjustment { get; private set; }
+        public decimal RewardsValue { get; private set; }
+        public decimal AdjustedTotal { get; private set; }
+        public double StockRiskPercentage { get; private set; }
+        public int SpecialsCount { get; private set; }
+
+        private StoreOptionResult() { }
+
+        public StoreOptionResult(string storeName, List<MatchedBasketItem> basketItems, UserPreferences prefs)
+        {
+            StoreName = storeName;
+            BasketItems = basketItems ?? new();
+            
+            ShelfTotal = BasketItems.Sum(i => i.TotalPrice);
+            NormalTotal = BasketItems.Sum(i => i.NormalPrice);
+            SpecialsCount = BasketItems.Count(i => i.IsSpecial);
+
+            if (storeName == "Coles")
+            {
+                FuelAdjustment = prefs.CalculateColesTravelCost();
+                RewardsValue = prefs.CalculateColesRewards(ShelfTotal, SpecialsCount);
+            }
+            else if (storeName == "Woolworths")
+            {
+                FuelAdjustment = prefs.CalculateWoolworthsTravelCost();
+                RewardsValue = prefs.CalculateWoolworthsRewards(ShelfTotal, SpecialsCount);
+            }
+            else if (storeName == "Split Shop")
+            {
+                FuelAdjustment = prefs.CalculateSplitTravelCost();
+                
+                var colesItems = BasketItems.Where(i => i.MatchedItem.Store == "Coles").ToList();
+                var wooliesItems = BasketItems.Where(i => i.MatchedItem.Store == "Woolworths").ToList();
+                
+                decimal colesRewards = prefs.CalculateColesRewards(colesItems.Sum(i => i.TotalPrice), colesItems.Count(i => i.IsSpecial));
+                decimal wooliesRewards = prefs.CalculateWoolworthsRewards(wooliesItems.Sum(i => i.TotalPrice), wooliesItems.Count(i => i.IsSpecial));
+                
+                RewardsValue = colesRewards + wooliesRewards;
+            }
+
+            AdjustedTotal = ShelfTotal + FuelAdjustment - RewardsValue;
+            
+            double nonOosProbability = BasketItems.Select(i => 1.0 - i.MatchedItem.OutOfStockProbability).Aggregate(1.0, (acc, p) => acc * p);
+            StockRiskPercentage = Math.Round(100.0 * (1.0 - nonOosProbability), 1);
+        }
     }
 
     public class MatchedBasketItem
     {
-        public int ListItemId { get; set; }
-        public string SearchQuery { get; set; } = "";
-        public CatalogItem MatchedItem { get; set; } = new();
-        public int Quantity { get; set; }
-        public decimal TotalPrice { get; set; }
-        public decimal NormalPrice { get; set; }
-        public bool IsSpecial { get; set; }
-        public string SpecialDetails { get; set; } = "";
+        public int ListItemId { get; private set; }
+        public string SearchQuery { get; private set; } = "";
+        public CatalogItem MatchedItem { get; private set; } = null!;
+        public int Quantity { get; private set; }
+        public decimal TotalPrice { get; private set; }
+        public decimal NormalPrice { get; private set; }
+        public bool IsSpecial { get; private set; }
+        public string SpecialDetails { get; private set; } = "";
+
+        private MatchedBasketItem() { }
+
+        public MatchedBasketItem(int listItemId, string searchQuery, CatalogItem matchedItem, int quantity)
+        {
+            if (matchedItem == null) throw new ArgumentNullException(nameof(matchedItem));
+            if (quantity <= 0) throw new ArgumentException("Quantity must be positive", nameof(quantity));
+
+            ListItemId = listItemId;
+            SearchQuery = searchQuery ?? "";
+            MatchedItem = matchedItem;
+            Quantity = quantity;
+            TotalPrice = matchedItem.ShelfPrice * quantity;
+            NormalPrice = matchedItem.NormalPrice * quantity;
+            IsSpecial = matchedItem.IsSpecial;
+            SpecialDetails = matchedItem.SpecialDetails;
+        }
     }
 }

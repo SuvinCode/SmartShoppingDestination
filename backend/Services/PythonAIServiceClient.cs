@@ -10,7 +10,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace backend.Services
 {
-    public class PythonAIServiceClient
+    public class PythonAIServiceClient : IPythonAIServiceClient
     {
         private readonly HttpClient _httpClient;
         private readonly string _pythonServiceUrl;
@@ -88,16 +88,28 @@ namespace backend.Services
 
     public class OcrResult
     {
+        [System.Text.Json.Serialization.JsonPropertyName("store_detected")]
         public string StoreDetected { get; set; } = "";
+
+        [System.Text.Json.Serialization.JsonPropertyName("items")]
         public List<OcrItem> Items { get; set; } = new();
+
+        [System.Text.Json.Serialization.JsonPropertyName("raw_text")]
         public string RawText { get; set; } = "";
     }
 
     public class OcrItem
     {
+        [System.Text.Json.Serialization.JsonPropertyName("raw_name")]
         public string RawName { get; set; } = "";
+
+        [System.Text.Json.Serialization.JsonPropertyName("quantity")]
         public int Quantity { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("total_price")]
         public decimal TotalPrice { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("unit_price")]
         public decimal UnitPrice { get; set; }
     }
 

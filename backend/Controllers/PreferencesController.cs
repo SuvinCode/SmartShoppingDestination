@@ -22,7 +22,7 @@ namespace backend.Controllers
             var prefs = _context.UserPreferences.FirstOrDefault(p => p.UserId == userId);
             if (prefs == null)
             {
-                prefs = new UserPreferences { UserId = userId };
+                prefs = new UserPreferences(userId);
                 _context.UserPreferences.Add(prefs);
                 _context.SaveChanges();
             }
@@ -31,27 +31,48 @@ namespace backend.Controllers
         }
 
         [HttpPut]
-        public IActionResult UpdatePreferences([FromQuery] int userId, [FromBody] UserPreferences model)
+        public IActionResult UpdatePreferences([FromQuery] int userId, [FromBody] UpdatePreferencesDto dto)
         {
+            if (dto == null) return BadRequest("Invalid payload.");
+
             var prefs = _context.UserPreferences.FirstOrDefault(p => p.UserId == userId);
             if (prefs == null)
             {
-                model.UserId = userId;
-                _context.UserPreferences.Add(model);
-                prefs = model;
+                prefs = new UserPreferences(userId);
+                prefs.UpdatePreferences(
+                    dto.DistanceToColesKm,
+                    dto.DistanceToWoolworthsKm,
+                    dto.FuelCostPerKm,
+                    dto.HasFlybuys,
+                    dto.HasEverydayRewards,
+                    dto.MinSplitSavingThreshold
+                );
+                _context.UserPreferences.Add(prefs);
             }
             else
             {
-                prefs.DistanceToColesKm = model.DistanceToColesKm;
-                prefs.DistanceToWoolworthsKm = model.DistanceToWoolworthsKm;
-                prefs.FuelCostPerKm = model.FuelCostPerKm;
-                prefs.HasFlybuys = model.HasFlybuys;
-                prefs.HasEverydayRewards = model.HasEverydayRewards;
-                prefs.MinSplitSavingThreshold = model.MinSplitSavingThreshold;
+                prefs.UpdatePreferences(
+                    dto.DistanceToColesKm,
+                    dto.DistanceToWoolworthsKm,
+                    dto.FuelCostPerKm,
+                    dto.HasFlybuys,
+                    dto.HasEverydayRewards,
+                    dto.MinSplitSavingThreshold
+                );
             }
 
             _context.SaveChanges();
             return Ok(prefs);
         }
+    }
+
+    public class UpdatePreferencesDto
+    {
+        public double DistanceToColesKm { get; set; }
+        public double DistanceToWoolworthsKm { get; set; }
+        public decimal FuelCostPerKm { get; set; }
+        public bool HasFlybuys { get; set; }
+        public bool HasEverydayRewards { get; set; }
+        public decimal MinSplitSavingThreshold { get; set; }
     }
 }

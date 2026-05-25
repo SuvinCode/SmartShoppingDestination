@@ -30,27 +30,18 @@ namespace backend.Controllers
                 return BadRequest(new { message = "Username already exists" });
             }
 
-            var user = new User
-            {
-                Username = model.Username,
-                Email = model.Email ?? $"{model.Username}@docket.com",
-                PasswordHash = model.Password // plaintext for demo simplicity
-            };
+            var user = new User(
+                model.Username,
+                model.Email ?? $"{model.Username}@docket.com",
+                model.Password // plaintext for demo simplicity
+            );
 
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
-            // Seed default preferences for the new user
-            var prefs = new UserPreferences
-            {
-                UserId = user.Id,
-                DistanceToColesKm = 5.0,
-                DistanceToWoolworthsKm = 4.0,
-                FuelCostPerKm = 0.15M,
-                HasFlybuys = false,
-                HasEverydayRewards = false,
-                MinSplitSavingThreshold = 3.00M
-            };
+            // Seed default preferences for the new user using domain rules
+            var prefs = new UserPreferences(user.Id);
+            prefs.UpdatePreferences(5.0, 4.0, 0.15M, false, false, 3.00M);
             _context.UserPreferences.Add(prefs);
             await _context.SaveChangesAsync();
 
@@ -60,13 +51,19 @@ namespace backend.Controllers
         [HttpPost("login")]
         public IActionResult Login([FromBody] UserDto model)
         {
-            var user = _context.Users.FirstOrDefault(u => 
-                u.Username.ToLower() == model.Username.ToLower() && 
-                u.PasswordHash == model.Password);
+            var user = _context.Users.FirstOrDefault(u => u.Username.ToLower() == model.Username.ToLower());
                 
-            if (user == null)
+            if (user == null || !user.VerifyPassword(model.Password))
             {
                 return Unauthorized(new { message = "Invalid username or password" });
+            }
+
+            // Clear shopping list items upon login to ensure it starts fresh
+            var listItems = _context.ShoppingListItems.Where(i => i.UserId == user.Id && !i.IsCompleted).ToList();
+            if (listItems.Any())
+            {
+                _context.ShoppingListItems.RemoveRange(listItems);
+                _context.SaveChanges();
             }
 
             return Ok(new { userId = user.Id, username = user.Username });

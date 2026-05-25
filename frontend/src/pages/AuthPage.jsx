@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import './AuthPage.css';
 import { API_URL } from '../App';
-import { ArrowLeft, KeyRound, Mail, User, AlertCircle, Sparkles } from 'lucide-react';
+import { ArrowLeft, KeyRound, Mail, User, AlertCircle, Sparkles, Receipt } from 'lucide-react';
+import Logo from '../components/Logo';
 
 function AuthPage({ isLogin, onNavigate, onLoginSuccess }) {
   const [username, setUsername] = useState('');
@@ -97,8 +98,9 @@ function AuthPage({ isLogin, onNavigate, onLoginSuccess }) {
         </div>
 
         <div className="auth-header">
-          <div className="auth-logo" onClick={() => onNavigate('landing')}>
-            Docket<span className="logo-dot"></span>
+          <div className="auth-logo" onClick={() => onNavigate('landing')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+            <Logo size={28} />
+            <span>Docket</span>
           </div>
           <h2 className="auth-title">
             {isLogin ? 'Welcome Back' : 'Create Account'}

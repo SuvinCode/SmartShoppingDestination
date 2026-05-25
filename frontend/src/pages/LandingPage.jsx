@@ -9,8 +9,11 @@ import {
   CreditCard, 
   ArrowRight,
   ShieldCheck,
-  Zap
+  Zap,
+  Receipt
 } from 'lucide-react';
+
+import Logo from '../components/Logo';
 
 function LandingPage({ user, onNavigate, onLogout }) {
   // Interactive Demo State
@@ -60,8 +63,9 @@ function LandingPage({ user, onNavigate, onLogout }) {
       <div className="container">
         {/* Navbar */}
         <header className="navbar">
-          <div className="logo">
-            Docket<span className="logo-dot"></span>
+          <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Logo size={28} />
+            <span>Docket</span>
           </div>
           
           <ul className="nav-links">
@@ -227,19 +231,9 @@ function LandingPage({ user, onNavigate, onLogout }) {
               <div className="feature-icon-wrapper">
                 <ScanLine size={24} />
               </div>
-              <h3 className="feature-item-title">Receipt OCR Upload</h3>
+              <h3 className="feature-item-title">Receipt Upload & Extraction</h3>
               <p className="feature-item-desc">
-                Simply take a photo of your Coles or Woolworths receipt. Our Python AI service processes the image, extracts the text, and populates your default shopping list instantly.
-              </p>
-            </div>
-
-            <div className="glass-panel feature-item-card">
-              <div className="feature-icon-wrapper">
-                <Shuffle size={24} />
-              </div>
-              <h3 className="feature-item-title">Smart Split-Shopping</h3>
-              <p className="feature-item-desc">
-                Visiting two stores can increase savings. Docket calculates exactly which items to buy where and only suggests it if the extra savings exceed your fuel and travel costs.
+                Simply upload your receipt. Our OCR extracts item details, while ML normalizes text (e.g., "WW CHKN BRST" to "Chicken Breast") and builds your personalized shopping profile.
               </p>
             </div>
 
@@ -247,19 +241,49 @@ function LandingPage({ user, onNavigate, onLogout }) {
               <div className="feature-icon-wrapper">
                 <TrendingUp size={24} />
               </div>
-              <h3 className="feature-item-title">Savings Tracking</h3>
+              <h3 className="feature-item-title">Price Intelligence Layer</h3>
               <p className="feature-item-desc">
-                Visualize your shopping habits and watch your cumulative savings grow. Keep track of average savings per shop, total money spent, and log savings history.
+                Compares weekly Coles and Woolworths specials to calculate your personal basket cost. Predicts future specials, detects substitutes, and spots historical pricing patterns.
               </p>
             </div>
 
             <div className="glass-panel feature-item-card">
               <div className="feature-icon-wrapper">
-                <CreditCard size={24} />
+                <MapPin size={24} />
               </div>
-              <h3 className="feature-item-title">Rewards Valuation</h3>
+              <h3 className="feature-item-title">Google Maps Integration</h3>
               <p className="feature-item-desc">
-                Factors in Flybuys and Everyday Rewards card memberships. Points are converted to cash values and deducted from basket estimates, ensuring optimal rewards optimization.
+                Locates nearest stores with travel times and distance. Factors fuel costs into savings trade-offs, and plots optimal multi-stop split-shopping routes.
+              </p>
+            </div>
+
+            <div className="glass-panel feature-item-card">
+              <div className="feature-icon-wrapper">
+                <Sparkles size={24} />
+              </div>
+              <h3 className="feature-item-title">The Data Flywheel</h3>
+              <p className="feature-item-desc">
+                Every receipt upload makes the recommendation engine smarter. Compiles aggregated pricing patterns and learns user brand preferences to improve long-term utility.
+              </p>
+            </div>
+
+            <div className="glass-panel feature-item-card">
+              <div className="feature-icon-wrapper">
+                <Zap size={24} />
+              </div>
+              <h3 className="feature-item-title">Technical Stack</h3>
+              <p className="feature-item-desc">
+                Powered by Google Vision API/Textract for OCR, lightweight RapidFuzz ML models for catalog matching, and Google Maps API for geolocated routing.
+              </p>
+            </div>
+
+            <div className="glass-panel feature-item-card">
+              <div className="feature-icon-wrapper">
+                <TrendingUp size={24} />
+              </div>
+              <h3 className="feature-item-title">Top-5 Store Ranking Engine</h3>
+              <p className="feature-item-desc">
+                A 6-phase algorithm ranks stores across Coles, Woolworths, Aldi, IGA, and Costco by how well they cover your most-purchased items — weighted by purchase frequency — and reconciles it with a proximity layer so you always get the right trade-off.
               </p>
             </div>
           </div>
