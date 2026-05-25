@@ -1,0 +1,146 @@
+/* Auth Page CSS - Trustworthy Light Theme */
+.auth-wrapper {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+  background-color: var(--bg-page);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 32px; /* 32px padding */
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--bg-white);
+  border: 1px solid var(--divider);
+  border-radius: 12px;
+  box-shadow: none; /* flat trustworthy surface */
+}
+
+.auth-header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.auth-logo {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.auth-logo .logo-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--interactive);
+  display: inline-block;
+}
+
+.auth-title {
+  font-size: 22px;
+  color: var(--primary);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  margin-top: 8px;
+}
+
+.auth-subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-charcoal);
+}
+
+/* Warnings and errors - NO red */
+.auth-error {
+  background-color: var(--bg-ice);
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  font-size: 14px;
+  padding: 12px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.auth-error svg {
+  color: var(--primary);
+  width: 20px;
+  height: 20px;
+}
+
+.auth-toggle {
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.auth-toggle-link {
+  color: var(--interactive);
+  text-decoration: none;
+  font-weight: 700;
+  cursor: pointer;
+  margin-left: 4px;
+}
+
+.auth-toggle-link:hover {
+  text-decoration: underline;
+}
+
+.demo-login-btn {
+  width: 100%;
+  height: 48px;
+  border: 1px solid var(--primary);
+  background-color: var(--bg-white);
+  color: var(--primary);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.demo-login-btn:hover {
+  background-color: var(--bg-ice);
+}
+
+.demo-login-btn svg {
+  color: var(--primary);
+  width: 20px;
+  height: 20px;
+}

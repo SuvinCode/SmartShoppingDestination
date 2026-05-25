@@ -1,0 +1,83 @@
+{
+  "format": 1,
+  "restore": {
+    "/home/suvin/Desktop/GitHub/SmartShoppingDestination/backend/backend.csproj": {}
+  },
+  "projects": {
+    "/home/suvin/Desktop/GitHub/SmartShoppingDestination/backend/backend.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/home/suvin/Desktop/GitHub/SmartShoppingDestination/backend/backend.csproj",
+        "projectName": "backend",
+        "projectPath": "/home/suvin/Desktop/GitHub/SmartShoppingDestination/backend/backend.csproj",
+        "packagesPath": "/home/suvin/.nuget/packages/",
+        "outputPath": "/home/suvin/Desktop/GitHub/SmartShoppingDestination/backend/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/home/suvin/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Microsoft.AspNetCore.OpenApi": {
+              "target": "Package",
+              "version": "[8.0.27, )"
+            },
+            "Microsoft.EntityFrameworkCore.Sqlite": {
+              "target": "Package",
+              "version": "[8.0.8, )"
+            },
+            "Swashbuckle.AspNetCore": {
+              "target": "Package",
+              "version": "[6.6.2, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.AspNetCore.App": {
+              "privateAssets": "none"
+            },
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/home/suvin/.dotnet/sdk/8.0.421/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}
