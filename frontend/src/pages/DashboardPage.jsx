@@ -23,7 +23,6 @@ import {
   MapPin,
   Trophy,
   Star,
-  ArrowRight,
   Receipt
 } from 'lucide-react';
 
@@ -44,12 +43,15 @@ function DashboardPage({ user, onLogout }) {
     hasFlybuys: false,
     hasEverydayRewards: false,
     minSplitSavingThreshold: 3.00,
+    region: localStorage.getItem(`docket_region_${user?.userId || 'guest'}`) || 'Melbourne',
     homeAddress: localStorage.getItem(`docket_home_address_${user?.userId || 'guest'}`) || 'Richmond VIC'
   });
 
   // State for comparison
   const [comparison, setComparison] = useState(null);
-  const [useSplitShop, setUseSplitShop] = useState(true);
+
+  // State for scanned receipts (each receipt is independent data)
+  const [scannedReceipts, setScannedReceipts] = useState([]);
 
   // State for savings history
   const [savingsStats, setSavingsStats] = useState({
@@ -93,15 +95,55 @@ function DashboardPage({ user, onLogout }) {
     { Name: 'Cavendish Bananas', Category: 'Produce', PackageSize: '1kg' }
   ];
 
+  const regionStoreData = {
+    'Melbourne': {
+      displayNames: { Coles: 'Coles Richmond', Woolworths: 'Woolworths South Yarra', Aldi: 'Aldi Richmond', IGA: 'IGA Richmond', Costco: 'Costco Docklands' },
+      addresses: { Coles: 'Victoria Gardens Shopping Centre, Richmond VIC 3121', Woolworths: '255 Chapel St, South Yarra VIC 3141', Aldi: '459 Church St, Richmond VIC 3121', IGA: '203 Barkly St, Richmond VIC 3121', Costco: '381 Footscray Rd, Docklands VIC 3008' }
+    },
+    'Sydney': {
+      displayNames: { Coles: 'Coles Bondi Junction', Woolworths: 'Woolworths Town Hall', Aldi: 'Aldi Marrickville', IGA: 'IGA Surry Hills', Costco: 'Costco Casula' },
+      addresses: { Coles: 'Westfield Bondi Junction, 500 Oxford St, Bondi Junction NSW 2022', Woolworths: '100 Market St, Sydney NSW 2000', Aldi: '235 Marrickville Rd, Marrickville NSW 2204', IGA: '68 Foveaux St, Surry Hills NSW 2010', Costco: 'Crossroads Homemaker Centre, Casula NSW 2170' }
+    },
+    'Brisbane': {
+      displayNames: { Coles: 'Coles Toowong', Woolworths: 'Woolworths Indooroopilly', Aldi: 'Aldi Toowong', IGA: 'IGA Paddington' },
+      addresses: { Coles: 'Toowong Village, 9 Sherwood Rd, Toowong QLD 4066', Woolworths: 'Indooroopilly Shopping Centre, 322 Moggill Rd, Indooroopilly QLD 4068', Aldi: '5 Sherwood Rd, Toowong QLD 4066', IGA: '167 Given Tce, Paddington QLD 4064' }
+    },
+    'Perth': {
+      displayNames: { Coles: 'Coles Subiaco', Woolworths: 'Woolworths Claremont', Aldi: 'Aldi Innaloo', IGA: 'IGA Mt Lawley' },
+      addresses: { Coles: 'Crossways Shopping Centre, 166 Rokeby Rd, Subiaco WA 6008', Woolworths: 'Claremont Quarter, 28 St Quentin Ave, Claremont WA 6010', Aldi: 'Ellen Stirling Blvd, Innaloo WA 6018', IGA: '746 Beaufort St, Mt Lawley WA 6050' }
+    },
+    'Adelaide': {
+      displayNames: { Coles: 'Coles Norwood', Woolworths: 'Woolworths Burnside', Aldi: 'Aldi Prospect', IGA: 'IGA Unley', Costco: 'Costco Kilburn' },
+      addresses: { Coles: 'Norwood Place, 172 The Parade, Norwood SA 5067', Woolworths: 'Burnside Village, 447 Portrush Rd, Glenside SA 5065', Aldi: '230 Prospect Rd, Prospect SA 5082', IGA: '130 Unley Rd, Unley SA 5061', Costco: '111 Regency Rd, Kilburn SA 5084' }
+    },
+    'Gold Coast': {
+      displayNames: { Coles: 'Coles Robina', Woolworths: 'Woolworths Burleigh', Aldi: 'Aldi Bundall', IGA: 'IGA Mermaid Beach' },
+      addresses: { Coles: 'Robina Town Centre, Robina QLD 4226', Woolworths: '149 W Burleigh Rd, Burleigh Heads QLD 4220', Aldi: '76 Bundall Rd, Bundall QLD 4217', IGA: '2535 Gold Coast Hwy, Mermaid Beach QLD 4218' }
+    },
+    'Hobart': {
+      displayNames: { Coles: 'Coles New Town', Woolworths: 'Woolworths Sandy Bay', IGA: 'IGA Battery Point' },
+      addresses: { Coles: '340 Elizabeth St, North Hobart TAS 7000', Woolworths: '80 Sandy Bay Rd, Sandy Bay TAS 7005', IGA: '55 Hampden Rd, Battery Point TAS 7004' }
+    },
+    'Darwin': {
+      displayNames: { Coles: 'Coles Casuarina', Woolworths: 'Woolworths Casuarina', IGA: 'IGA Parap' },
+      addresses: { Coles: 'Casuarina Square, 247 Trower Rd, Casuarina NT 0810', Woolworths: 'Casuarina Square, 247 Trower Rd, Casuarina NT 0810', IGA: '32 Parap Rd, Parap NT 0820' }
+    },
+    'Canberra': {
+      displayNames: { Coles: 'Coles Manuka', Woolworths: 'Woolworths Woden', Aldi: 'Aldi Belconnen', IGA: 'IGA Kingston', Costco: 'Costco Majura Park' },
+      addresses: { Coles: 'Manuka Village, Franklin St, Manuka ACT 2603', Woolworths: 'Westfield Woden, Keltie St, Phillip ACT 2606', Aldi: 'Belconnen Way, Belconnen ACT 2617', IGA: '7 Giles St, Kingston ACT 2604', Costco: 'Mustang Ave, Majura Park ACT 2609' }
+    }
+  };
+
+  const getStoreDisplayName = (storeName) => {
+    const region = preferences.region || 'Melbourne';
+    const data = regionStoreData[region] || regionStoreData['Melbourne'];
+    return data.displayNames?.[storeName] || storeName;
+  };
+
   const getStoreAddress = (storeName) => {
-    const addresses = {
-      'Coles': 'Coles Richmond, Victoria Gardens Shopping Centre, Richmond VIC 3121',
-      'Woolworths': 'Woolworths Richmond, 261-271 Bridge Rd, Richmond VIC 3121',
-      'Aldi': 'Aldi Richmond, 459 Church St, Richmond VIC 3121',
-      'IGA': 'IGA Richmond, 203 Barkly St, Richmond VIC 3121',
-      'Costco': 'Costco Wholesale, 381 Footscray Rd, Docklands VIC 3008'
-    };
-    return addresses[storeName] || `${storeName} Supermarket, Richmond VIC 3121`;
+    const region = preferences.region || 'Melbourne';
+    const data = regionStoreData[region] || regionStoreData['Melbourne'];
+    return data.addresses?.[storeName] || `${storeName} Supermarket`;
   };
 
   useEffect(() => {
@@ -170,12 +212,13 @@ function DashboardPage({ user, onLogout }) {
       const data = await response.json();
       setPreferences({
         ...data,
+        region: data.region || localStorage.getItem(`docket_region_${user.userId}`) || 'Melbourne',
         homeAddress: localStorage.getItem(`docket_home_address_${user.userId}`) || 'Richmond VIC'
       });
     } catch {
-      // Keep defaults but update homeAddress
       setPreferences(prev => ({
         ...prev,
+        region: localStorage.getItem(`docket_region_${user.userId}`) || 'Melbourne',
         homeAddress: localStorage.getItem(`docket_home_address_${user.userId}`) || 'Richmond VIC'
       }));
     }
@@ -186,7 +229,22 @@ function DashboardPage({ user, onLogout }) {
       const response = await fetch(`${API_URL}/dashboard/savings?userId=${user.userId}`);
       if (!response.ok) throw new Error();
       const data = await response.json();
-      setSavingsStats(data);
+      
+      const normalizedHistory = (data.history || []).map(item => ({
+        Date: item.date || item.Date || "",
+        AmountSaved: item.amountSaved !== undefined ? item.amountSaved : (item.AmountSaved !== undefined ? item.AmountSaved : 0),
+        TotalSpent: item.totalSpent !== undefined ? item.totalSpent : (item.TotalSpent !== undefined ? item.TotalSpent : 0),
+        Store: item.store || item.Store || "",
+        CumulativeSavings: item.cumulativeSavings !== undefined ? item.cumulativeSavings : (item.CumulativeSavings !== undefined ? item.CumulativeSavings : 0)
+      }));
+
+      setSavingsStats({
+        cumulativeSavings: data.cumulativeSavings !== undefined ? data.cumulativeSavings : 0,
+        totalSpent: data.totalSpent !== undefined ? data.totalSpent : 0,
+        totalShops: data.totalShops !== undefined ? data.totalShops : 0,
+        averageSavings: data.averageSavings !== undefined ? data.averageSavings : 0,
+        history: normalizedHistory
+      });
     } catch {
       // Offline fallback: load mock history
       setSavingsStats({
@@ -197,9 +255,9 @@ function DashboardPage({ user, onLogout }) {
         history: [
           { Date: "2026-05-01", AmountSaved: 12.40, TotalSpent: 85.20, Store: "Woolworths", CumulativeSavings: 12.40 },
           { Date: "2026-05-08", AmountSaved: 8.50, TotalSpent: 74.10, Store: "Coles", CumulativeSavings: 20.90 },
-          { Date: "2026-05-15", AmountSaved: 21.60, TotalSpent: 112.30, Store: "Split Shop", CumulativeSavings: 42.50 },
+          { Date: "2026-05-15", AmountSaved: 21.60, TotalSpent: 112.30, Store: "Coles", CumulativeSavings: 42.50 },
           { Date: "2026-05-20", AmountSaved: 14.80, TotalSpent: 92.50, Store: "Woolworths", CumulativeSavings: 57.30 },
-          { Date: "2026-05-24", AmountSaved: 18.20, TotalSpent: 88.40, Store: "Split Shop", CumulativeSavings: 75.50 }
+          { Date: "2026-05-24", AmountSaved: 18.20, TotalSpent: 88.40, Store: "Woolworths", CumulativeSavings: 75.50 }
         ]
       });
     }
@@ -241,9 +299,9 @@ function DashboardPage({ user, onLogout }) {
           { productName: 'Eggs 12pk', occurrences: 7, rank: 5, rankWeight: 0.2 },
         ],
         topByWeightedSavings: [
-          { storeName: 'Coles', weightedScore: 1.33, estimatedWeeklySaving: 18.00, winningProducts: ['Chicken Breast 500g', 'Western Star Butter Block Salted'], specialDiscounts: ['Chicken Breast 500g'], savingsSummary: 'Strong on your Rank 3 items, estimated saving $18.00' },
-          { storeName: 'Woolworths', weightedScore: 0.70, estimatedWeeklySaving: 15.00, winningProducts: ['Bega Tasty Cheese Block', 'Eggs 12pk'], specialDiscounts: ['Bega Tasty Cheese Block'], savingsSummary: 'Best for your cheese and eggs, estimated saving $15.00' },
-          { storeName: 'Aldi', weightedScore: 1.20, estimatedWeeklySaving: 20.00, winningProducts: ['Full Cream Milk', 'White Toast Bread'], specialDiscounts: [], savingsSummary: 'Cheapest milk and bread, estimated saving $20.00' },
+          { storeName: 'Coles', weightedScore: 1.33, estimatedWeeklySaving: 18.00, winningProducts: ['Chicken Breast 500g', 'Western Star Butter Block Salted'], specialDiscounts: ['Chicken Breast 500g'], savingsSummary: 'Strong on your Rank 3 items' },
+          { storeName: 'Woolworths', weightedScore: 0.70, estimatedWeeklySaving: 15.00, winningProducts: ['Bega Tasty Cheese Block', 'Eggs 12pk'], specialDiscounts: ['Bega Tasty Cheese Block'], savingsSummary: 'Best for your cheese and eggs' },
+          { storeName: 'Aldi', weightedScore: 1.20, estimatedWeeklySaving: 20.00, winningProducts: ['Full Cream Milk', 'White Toast Bread'], specialDiscounts: [], savingsSummary: 'Cheapest milk and bread' },
           { storeName: 'IGA', weightedScore: 0.40, estimatedWeeklySaving: 8.50, winningProducts: ['Eggs 12pk'], specialDiscounts: ['Eggs 12pk'], savingsSummary: 'Convenient but slightly more expensive overall' },
           { storeName: 'Costco', weightedScore: 0.95, estimatedWeeklySaving: 25.00, winningProducts: ['Bega Tasty Cheese Block', 'Full Cream Milk'], specialDiscounts: ['Bega Tasty Cheese Block'], savingsSummary: 'Great bulk savings if you travel' }
         ],
@@ -255,7 +313,13 @@ function DashboardPage({ user, onLogout }) {
           { storeName: 'Costco', distanceKm: 18.0, driveMinutes: 25, proximitySummary: '18.0 km, ~25 min drive' }
         ],
         tradeOffNarrative: 'Aldi saves you the most ($20.00) but is 4.6 km away. Woolworths saves $5.00 less but is only 0.8 km from you.',
-        splitShopSuggestion: null
+        itemComparisons: [
+          { productName: 'Full Cream Milk 2L', cheapestStore: 'Aldi', storePrices: { 'Coles': { price: 3.10, isSpecial: false, specialDetails: '', packageSize: '2L' }, 'Woolworths': { price: 3.10, isSpecial: false, specialDetails: '', packageSize: '2L' }, 'Aldi': { price: 2.49, isSpecial: false, specialDetails: '', packageSize: '2L' }, 'IGA': { price: 3.40, isSpecial: false, specialDetails: '', packageSize: '2L' }, 'Costco': { price: 4.99, isSpecial: false, specialDetails: '', packageSize: '3L' } } },
+          { productName: 'White Bread 650g', cheapestStore: 'Aldi', storePrices: { 'Coles': { price: 2.70, isSpecial: false, specialDetails: '', packageSize: '650g' }, 'Woolworths': { price: 2.70, isSpecial: false, specialDetails: '', packageSize: '650g' }, 'Aldi': { price: 1.99, isSpecial: false, specialDetails: '', packageSize: '650g' }, 'IGA': { price: 2.90, isSpecial: true, specialDetails: 'Save $0.60', packageSize: '650g' }, 'Costco': { price: 4.49, isSpecial: false, specialDetails: '', packageSize: '1300g' } } },
+          { productName: 'Cheese Block 500g', cheapestStore: 'Aldi', storePrices: { 'Coles': { price: 8.50, isSpecial: true, specialDetails: 'Save $1.00', packageSize: '500g' }, 'Woolworths': { price: 9.50, isSpecial: false, specialDetails: '', packageSize: '500g' }, 'Aldi': { price: 5.99, isSpecial: false, specialDetails: '', packageSize: '500g' }, 'IGA': { price: 8.99, isSpecial: false, specialDetails: '', packageSize: '500g' }, 'Costco': { price: 12.99, isSpecial: false, specialDetails: '', packageSize: '1kg' } } },
+          { productName: 'Chocolate Block 180g', cheapestStore: 'Aldi', storePrices: { 'Coles': { price: 6.00, isSpecial: false, specialDetails: '', packageSize: '180g' }, 'Woolworths': { price: 3.00, isSpecial: true, specialDetails: '1/2 Price', packageSize: '180g' }, 'Aldi': { price: 1.79, isSpecial: false, specialDetails: '', packageSize: '200g' }, 'IGA': { price: 5.50, isSpecial: true, specialDetails: 'Save $0.50', packageSize: '180g' } } },
+          { productName: 'Bananas 1kg', cheapestStore: 'Aldi', storePrices: { 'Coles': { price: 3.90, isSpecial: false, specialDetails: '', packageSize: '1kg' }, 'Woolworths': { price: 3.90, isSpecial: false, specialDetails: '', packageSize: '1kg' }, 'Aldi': { price: 3.49, isSpecial: false, specialDetails: '', packageSize: '1kg' }, 'IGA': { price: 4.00, isSpecial: false, specialDetails: '', packageSize: '1kg' } } }
+        ]
       });
     } finally {
       setRecommendationsLoading(false);
@@ -372,6 +436,63 @@ function DashboardPage({ user, onLogout }) {
     }
   };
 
+  const renderCategoryCard = (rec, title, emoji, themeColor) => {
+    if (!rec || !rec.storeName) return null;
+    return (
+      <div className="category-rec-card glass-panel animate-slide-up" style={{ borderLeft: `4px solid ${themeColor}`, padding: '12px', background: 'rgba(255, 255, 255, 0.02)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '1rem' }}>{emoji}</span>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{title}</span>
+            </div>
+            <h4 style={{ margin: '4px 0 0 0', fontSize: '0.95rem', fontWeight: 800, color: 'var(--primary)' }}>
+              {getStoreDisplayName(rec.storeName)}
+            </h4>
+          </div>
+          <span className="savings-chip" style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--blue-500)', fontSize: '0.75rem', padding: '3px 6px', borderRadius: '4px', fontWeight: 700, whiteSpace: 'nowrap' }}>
+            {rec.metricValue}
+          </span>
+        </div>
+        
+        <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-charcoal)', lineHeight: '1.4' }}>
+          {rec.explanation}
+        </p>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <MapPin size={10} style={{ color: 'var(--blue-500)', flexShrink: 0 }} />
+            <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{getStoreAddress(rec.storeName)}</span>
+          </div>
+        </div>
+
+        {rec.winningProducts && rec.winningProducts.length > 0 && (
+          <div>
+            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Cheapest Items:</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+              {rec.winningProducts.slice(0, 3).map(p => (
+                <span key={p} className="product-win-tag" style={{ fontSize: '0.65rem', padding: '1px 4px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', border: '1px solid var(--border-glass)' }}>{p}</span>
+              ))}
+              {rec.winningProducts.length > 3 && (
+                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>+{rec.winningProducts.length - 3} more</span>
+              )}
+            </div>
+          </div>
+        )}
+
+        <a 
+          className="btn btn-secondary" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(preferences.homeAddress || 'Richmond VIC')}&destination=${encodeURIComponent(getStoreDisplayName(rec.storeName) + ', ' + getStoreAddress(rec.storeName))}`}
+          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '5px 0', fontSize: '0.75rem', textDecoration: 'none', marginTop: '4px' }}
+        >
+          <Navigation size={10} /> View in Google Maps
+        </a>
+      </div>
+    );
+  };
+
   // 7. Sync Loyalty purchase history
   const handleSyncLoyalty = async () => {
     setLoading(true);
@@ -468,46 +589,18 @@ function DashboardPage({ user, onLogout }) {
       const wooliesAdjusted = wooliesShelf + wooliesFuel - wooliesRewards;
       const wooliesRisk = 100 * (1 - simulatedWooliesList.reduce((acc, i) => acc * (1 - i.matchedItem.outOfStockProbability), 1));
 
-      // Split Shop totals
-      const splitColes = [];
-      const splitWoolies = [];
-      for (let i = 0; i < shoppingList.length; i++) {
-        const c = simulatedColesList[i];
-        const w = simulatedWooliesList[i];
-        if (c.totalPrice <= w.totalPrice) {
-          splitColes.push(c);
-        } else {
-          splitWoolies.push(w);
-        }
-      }
-
-      const splitShelf = splitColes.reduce((a, b) => a + b.totalPrice, 0) + splitWoolies.reduce((a, b) => a + b.totalPrice, 0);
-      const splitFuel = (preferences.distanceToColesKm + preferences.distanceToWoolworthsKm) * 2 * preferences.fuelCostPerKm;
-      const splitColesRewards = preferences.hasFlybuys ? (splitColes.reduce((a,b) => a+b.totalPrice,0) * 0.005 + splitColes.filter(i => i.isSpecial).length * 0.25) : 0;
-      const splitWooliesRewards = preferences.hasEverydayRewards ? (splitWoolies.reduce((a,b) => a+b.totalPrice,0) * 0.005 + splitWoolies.filter(i => i.isSpecial).length * 0.25) : 0;
-      const splitAdjusted = splitShelf + splitFuel - (splitColesRewards + splitWooliesRewards);
-      const splitRisk = 100 * (1 - [...splitColes, ...splitWoolies].reduce((acc, i) => acc * (1 - i.matchedItem.outOfStockProbability), 1));
-
       // Result assembly
       const bestSingle = colesAdjusted <= wooliesAdjusted ? "Coles" : "Woolworths";
       const bestSingleTotal = colesAdjusted <= wooliesAdjusted ? colesAdjusted : wooliesAdjusted;
       const worstSingleTotal = colesAdjusted > wooliesAdjusted ? colesAdjusted : wooliesAdjusted;
-      
-      const splitSaving = bestSingleTotal - splitAdjusted;
-      const isSplitRec = splitSaving > preferences.minSplitSavingThreshold && splitColes.length > 0 && splitWoolies.length > 0;
 
       const mockResult = {
-        winnerStore: isSplitRec ? "Split Shop" : bestSingle,
+        winnerStore: bestSingle,
         singleStoreWinner: bestSingle,
-        totalSavings: isSplitRec ? worstSingleTotal - splitAdjusted : worstSingleTotal - bestSingleTotal,
+        totalSavings: worstSingleTotal - bestSingleTotal,
         singleStoreSavings: worstSingleTotal - bestSingleTotal,
-        splitExtraSavings: Math.max(0, splitSaving),
-        isSplitRecommended: isSplitRec,
         coles: { storeName: "Coles", basketItems: simulatedColesList, shelfTotal: colesShelf, normalTotal: simulatedColesList.reduce((a, b) => a+b.normalPrice, 0), fuelAdjustment: colesFuel, rewardsValue: colesRewards, adjustedTotal: colesAdjusted, stockRiskPercentage: Math.round(colesRisk, 1), specialsCount: simulatedColesList.filter(i => i.isSpecial).length },
-        woolworths: { storeName: "Woolworths", basketItems: simulatedWooliesList, shelfTotal: wooliesShelf, normalTotal: simulatedWooliesList.reduce((a, b) => a+b.normalPrice, 0), fuelAdjustment: wooliesFuel, rewardsValue: wooliesRewards, adjustedTotal: wooliesAdjusted, stockRiskPercentage: Math.round(wooliesRisk, 1), specialsCount: simulatedWooliesList.filter(i => i.isSpecial).length },
-        split: { storeName: "Split Shop", basketItems: [...splitColes, ...splitWoolies], shelfTotal: splitShelf, normalTotal: splitColes.concat(splitWoolies).reduce((a, b) => a+b.normalPrice, 0), fuelAdjustment: splitFuel, rewardsValue: splitColesRewards + splitWooliesRewards, adjustedTotal: splitAdjusted, stockRiskPercentage: Math.round(splitRisk, 1), specialsCount: splitColes.concat(splitWoolies).filter(i => i.isSpecial).length },
-        splitColesBasket: splitColes,
-        splitWoolworthsBasket: splitWoolies
+        woolworths: { storeName: "Woolworths", basketItems: simulatedWooliesList, shelfTotal: wooliesShelf, normalTotal: simulatedWooliesList.reduce((a, b) => a+b.normalPrice, 0), fuelAdjustment: wooliesFuel, rewardsValue: wooliesRewards, adjustedTotal: wooliesAdjusted, stockRiskPercentage: Math.round(wooliesRisk, 1), specialsCount: simulatedWooliesList.filter(i => i.isSpecial).length }
       };
       
       setComparison(mockResult);
@@ -534,6 +627,7 @@ function DashboardPage({ user, onLogout }) {
 
     setOcrLoading(true);
     let successCount = 0;
+    const newReceipts = [];
 
     for (let file of uploadedFiles) {
       const formData = new FormData();
@@ -547,61 +641,68 @@ function DashboardPage({ user, onLogout }) {
         if (!response.ok) throw new Error();
         const data = await response.json();
         successCount++;
-        const distanceStr = data.distance ? ` (Distance to store: ${data.distance.toFixed(1)} km)` : "";
-        showToast(`Scanned ${data.store} receipt successfully!${distanceStr}`);
+
+        newReceipts.push({
+          id: Date.now() + successCount,
+          store: data.store,
+          storeLocation: data.storeLocation || '',
+          storeDisplayName: data.storeDisplayName || data.store,
+          receiptTotal: data.receiptTotal,
+          items: data.items || [],
+          fileName: file.name
+        });
+
+        showToast(`Scanned ${data.storeDisplayName || data.store} receipt — Total: $${(data.receiptTotal || 0).toFixed(2)}`);
       } catch (err) {
         console.warn("OCR API call failed (simulating locally):", err.message);
 
-        // Local simulation fallback: add items via POST to backend
         const isWoolworths = file.name.toLowerCase().includes('woolworths') || file.name.toLowerCase().includes('ww') || file.name.toLowerCase().includes('woolies');
         const store = isWoolworths ? "Woolworths" : "Coles";
+        const location = isWoolworths ? "South Yarra" : "Richmond";
 
-        // Add dummy OCR parsed items for the matching algorithm
-        const itemsToPost = isWoolworths ? [
-          { itemName: "Full Cream Milk", quantity: 1, packageSize: "2L" },
-          { itemName: "White Toast Bread", quantity: 1, packageSize: "650g" },
-          { itemName: "Bega Tasty Cheese Block", quantity: 1, packageSize: "500g" }
+        const mockItems = isWoolworths ? [
+          { itemName: "Full Cream Milk", quantity: 1, unitPrice: 3.60, totalPrice: 3.60, packageSize: "2L" },
+          { itemName: "Helga's Wholemeal Bread", quantity: 1, unitPrice: 3.50, totalPrice: 3.50, packageSize: "750g" },
+          { itemName: "Bananas", quantity: 1, unitPrice: 3.90, totalPrice: 3.90, packageSize: "1kg" }
         ] : [
-          { itemName: "Full Cream Milk", quantity: 2, packageSize: "2L" },
-          { itemName: "White Toast Bread", quantity: 1, packageSize: "650g" },
-          { itemName: "Western Star Butter Block Salted", quantity: 1, packageSize: "250g" }
+          { itemName: "Full Cream Milk", quantity: 2, unitPrice: 3.60, totalPrice: 7.20, packageSize: "2L" },
+          { itemName: "White Toast Bread", quantity: 1, unitPrice: 2.70, totalPrice: 2.70, packageSize: "650g" },
+          { itemName: "Bananas", quantity: 1, unitPrice: 3.50, totalPrice: 3.50, packageSize: "1kg" }
         ];
 
-        for (let item of itemsToPost) {
-          try {
-            await fetch(`${API_URL}/lists`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ userId: user.userId, itemName: item.itemName, quantity: item.quantity, packageSize: item.packageSize })
-            });
-          } catch (e) {
-            console.error("Local simulation POST failed", e);
-          }
-        }
+        const mockTotal = mockItems.reduce((sum, i) => sum + i.totalPrice, 0);
 
-        let dist = store === "Coles" ? preferences.distanceToColesKm : preferences.distanceToWoolworthsKm;
+        newReceipts.push({
+          id: Date.now() + successCount,
+          store,
+          storeLocation: location,
+          storeDisplayName: `${store} ${location}`,
+          receiptTotal: mockTotal,
+          items: mockItems,
+          fileName: file.name
+        });
+
         successCount++;
-        showToast(`Scanned ${store} receipt successfully! (Local simulation, Distance: ${dist.toFixed(1)} km)`);
+        showToast(`Scanned ${store} ${location} receipt — Total: $${mockTotal.toFixed(2)} (offline)`);
       }
     }
 
-    await loadShoppingList();
+    setScannedReceipts(prev => [...prev, ...newReceipts]);
     await loadStoreRecommendations();
     setOcrLoading(false);
     setUploadedFiles([]);
-    showToast(`Successfully processed all ${successCount} receipts!`);
+    showToast(`Successfully processed ${successCount} receipt${successCount !== 1 ? 's' : ''} as purchase history.`);
   };
 
   // 10. Checkout list & Save savings
   const handleCheckout = async () => {
     if (!comparison) return;
     
-    // Choose which option was picked
-    const pickedOption = useSplitShop && comparison.isSplitRecommended ? comparison.split : (comparison.winnerStore === 'Coles' ? comparison.coles : comparison.woolworths);
+    const pickedOption = comparison.winnerStore === 'Coles' ? comparison.coles : comparison.woolworths;
     
     const payload = {
       storePicked: pickedOption.storeName,
-      amountSaved: comparison.winnerStore === 'Split Shop' && !useSplitShop ? comparison.singleStoreSavings : comparison.totalSavings,
+      amountSaved: comparison.totalSavings,
       totalSpent: pickedOption.adjustedTotal
     };
 
@@ -656,7 +757,8 @@ function DashboardPage({ user, onLogout }) {
         fuelCostPerKm: preferences.fuelCostPerKm,
         hasFlybuys: preferences.hasFlybuys,
         hasEverydayRewards: preferences.hasEverydayRewards,
-        minSplitSavingThreshold: preferences.minSplitSavingThreshold
+        minSplitSavingThreshold: preferences.minSplitSavingThreshold,
+        region: preferences.region || 'Melbourne'
       };
       const response = await fetch(`${API_URL}/preferences?userId=${user.userId}`, {
         method: 'PUT',
@@ -665,9 +767,12 @@ function DashboardPage({ user, onLogout }) {
       });
       if (!response.ok) throw new Error();
       localStorage.setItem(`docket_home_address_${user.userId}`, preferences.homeAddress || 'Richmond VIC');
+      localStorage.setItem(`docket_region_${user.userId}`, preferences.region || 'Melbourne');
       showToast('Preferences updated successfully!');
+      await loadStoreRecommendations();
     } catch {
       localStorage.setItem(`docket_home_address_${user.userId}`, preferences.homeAddress || 'Richmond VIC');
+      localStorage.setItem(`docket_region_${user.userId}`, preferences.region || 'Melbourne');
       showToast('Preferences saved locally (offline)');
     } finally {
       setLoading(false);
@@ -839,152 +944,170 @@ function DashboardPage({ user, onLogout }) {
             className={`tab-btn ${activeTab === 'recommendations' ? 'active' : ''}`}
             onClick={() => setActiveTab('recommendations')}
           >
-            <Trophy size={18} /> Top Stores
+            <Trophy size={18} /> Recommendations
           </button>
         </nav>
 
         {/* Tab content */}
         {activeTab === 'compare' && (
           <div className="view-section compare-grid">
-            {/* LEFT COLUMN: List Builder */}
-            <div className="glass-panel builder-card animate-slide-up">
-              <h3 style={{ fontSize: '1.1rem', borderBottom: '1px solid var(--border-glass)', paddingBottom: '10px' }}>
-                Build Shopping List
-              </h3>
-              
-              {/* Autocomplete Input */}
-              <div className="search-box-wrapper">
-                <input 
-                  type="text" 
-                  className="glass-input" 
-                  placeholder="Search grocery item (e.g. Milk, Pasta)"
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                  style={{ width: '100%', paddingRight: '40px' }}
-                />
-                <Plus size={18} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-
-                {autocompleteResults.length > 0 && (
-                  <div className="autocomplete-dropdown">
-                    {autocompleteResults.map((item, idx) => (
-                      <div 
-                        key={idx} 
-                        className="autocomplete-item"
-                        onClick={() => handleAddItem(item.name, item.packageSize)}
-                      >
-                        <span className="autocomplete-item-name">{item.name}</span>
-                        {item.packageSize && <span className="autocomplete-item-size">{item.packageSize}</span>}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Shopping List Items */}
-              <div className="shopping-list">
-                {shoppingList.length > 0 ? (
-                  shoppingList.map((item) => (
-                    <div key={item.id} className="list-item">
-                      <div className="list-item-left">
-                        <span className="list-item-name">{item.itemName}</span>
-                        {item.packageSize && <span className="list-item-size">({item.packageSize})</span>}
-                      </div>
-                      
-                      <div className="list-item-right">
-                        <div className="qty-controls">
-                          <button className="qty-btn" onClick={() => handleUpdateQty(item.id, item.quantity - 1)}>-</button>
-                          <span className="qty-value">{item.quantity}</span>
-                          <button className="qty-btn" onClick={() => handleUpdateQty(item.id, item.quantity + 1)}>+</button>
-                        </div>
-                        <Trash2 className="delete-btn" size={16} onClick={() => handleDeleteItem(item.id)} />
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div style={{ padding: '30px 10px', textAlignment: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center', border: '1px dashed var(--border-glass)', borderRadius: '10px' }}>
-                    Your list is currently empty.
-                  </div>
-                )}
-              </div>
-
-              {shoppingList.length > 0 && (
-                <button className="btn btn-secondary" onClick={handleClearList} style={{ width: '100%', fontSize: '0.85rem' }}>
-                  Clear Active List
-                </button>
-              )}
-
-              {/* OCR Image Upload Dropzone */}
-              <div className="ocr-dropzone">
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={handleFileChange} 
-                  accept="image/*" 
-                  multiple
-                  style={{ display: 'none' }} 
-                />
+            {/* LEFT COLUMN: List Builder Wrapper */}
+            <div className="left-column-wrapper animate-slide-up" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div className="glass-panel builder-card" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <h3 style={{ fontSize: '1.1rem', borderBottom: '1px solid var(--border-glass)', paddingBottom: '10px' }}>
+                  Build Shopping List
+                </h3>
                 
-                {ocrLoading ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                    <RefreshCw size={24} className="animate-spin" style={{ animation: 'spin 1.5s linear infinite' }} />
-                    <span style={{ fontSize: '0.85rem', color: 'var(--primary)' }}>AI OCR Scanning Receipts...</span>
-                  </div>
-                ) : (
-                  <>
-                    <div onClick={() => fileInputRef.current && fileInputRef.current.click()} style={{ width: '100%', cursor: 'pointer' }}>
-                      <ScanLine size={24} style={{ color: 'var(--primary)', marginBottom: '4px' }} />
-                      <div style={{ fontSize: '0.88rem', fontWeight: 600 }}>+ Upload Receipts</div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Select multiple receipt images or documents</div>
-                    </div>
-                  </>
-                )}
-              </div>
+                {/* Autocomplete Input */}
+                <div className="search-box-wrapper">
+                  <input 
+                    type="text" 
+                    className="glass-input" 
+                    placeholder="Search grocery item (e.g. Milk, Pasta)"
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    style={{ width: '100%', paddingRight: '40px' }}
+                  />
+                  <Plus size={18} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
 
-              {/* Scan Actions & Queue */}
-              <div className="scan-actions-container" style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {uploadedFiles.length > 0 && !ocrLoading && (
-                  <div className="uploaded-files-queue glass-panel animate-slide-up" style={{ padding: '12px' }}>
-                    <div style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--primary)', marginBottom: '8px' }}>
-                      Scan Queue ({uploadedFiles.length} file{uploadedFiles.length > 1 ? 's' : ''})
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '120px', overflowY: 'auto' }}>
-                      {uploadedFiles.map((file, idx) => (
-                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', background: 'rgba(255,255,255,0.03)', padding: '6px 8px', borderRadius: '4px' }}>
-                          <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '80%' }}>{file.name}</span>
-                          <Trash2 
-                            size={14} 
-                            style={{ color: 'var(--danger)', cursor: 'pointer' }} 
-                            onClick={() => handleRemoveFile(idx)} 
-                          />
+                  {autocompleteResults.length > 0 && (
+                    <div className="autocomplete-dropdown">
+                      {autocompleteResults.map((item, idx) => (
+                        <div 
+                          key={idx} 
+                          className="autocomplete-item"
+                          onClick={() => handleAddItem(item.name, item.packageSize)}
+                        >
+                          <span className="autocomplete-item-name">{item.name}</span>
+                          {item.packageSize && <span className="autocomplete-item-size">{item.packageSize}</span>}
                         </div>
                       ))}
                     </div>
-                  </div>
+                  )}
+                </div>
+
+                {/* Shopping List Items */}
+                <div className="shopping-list">
+                  {shoppingList.length > 0 ? (
+                    shoppingList.map((item) => (
+                      <div key={item.id} className="list-item">
+                        <div className="list-item-left">
+                          <span className="list-item-name">{item.itemName}</span>
+                          {item.packageSize && <span className="list-item-size">({item.packageSize})</span>}
+                        </div>
+                        
+                        <div className="list-item-right">
+                          <div className="qty-controls">
+                            <button className="qty-btn" onClick={() => handleUpdateQty(item.id, item.quantity - 1)}>-</button>
+                            <span className="qty-value">{item.quantity}</span>
+                            <button className="qty-btn" onClick={() => handleUpdateQty(item.id, item.quantity + 1)}>+</button>
+                          </div>
+                          <Trash2 className="delete-btn" size={16} onClick={() => handleDeleteItem(item.id)} />
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ padding: '30px 10px', textAlignment: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center', border: '1px dashed var(--border-glass)', borderRadius: '10px' }}>
+                      Your list is currently empty.
+                    </div>
+                  )}
+                </div>
+
+                {shoppingList.length > 0 && (
+                  <button className="btn btn-secondary" onClick={handleClearList} style={{ width: '100%', fontSize: '0.85rem' }}>
+                    Clear Active List
+                  </button>
                 )}
 
-                <button 
-                  className="btn btn-primary" 
-                  onClick={handleScanDocuments} 
-                  disabled={ocrLoading || uploadedFiles.length === 0}
-                  style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: 700 }}
-                >
-                  <RefreshCw size={14} className={ocrLoading ? "animate-spin" : ""} /> 
-                  {ocrLoading ? "Scanning..." : "Scan Documents"}
-                </button>
-              </div>
+                {/* OCR Image Upload Dropzone */}
+                <div className="ocr-dropzone">
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    onChange={handleFileChange} 
+                    accept="image/*" 
+                    multiple
+                    style={{ display: 'none' }} 
+                  />
+                  
+                  {ocrLoading ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                      <RefreshCw size={24} className="animate-spin" style={{ animation: 'spin 1.5s linear infinite' }} />
+                      <span style={{ fontSize: '0.85rem', color: 'var(--primary)' }}>AI OCR Scanning Receipts...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div onClick={() => fileInputRef.current && fileInputRef.current.click()} style={{ width: '100%', cursor: 'pointer' }}>
+                        <ScanLine size={24} style={{ color: 'var(--primary)', marginBottom: '4px' }} />
+                        <div style={{ fontSize: '0.88rem', fontWeight: 600 }}>+ Upload Receipts</div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Select multiple receipt images or documents</div>
+                      </div>
+                    </>
+                  )}
+                </div>
 
-              {/* Loyalty card purchase history import */}
-              <div className="loyalty-sync-box">
-                <span className="loyalty-title">Sync Loyalty Purchase History</span>
-                <div className="loyalty-buttons">
-                  <button className="btn btn-secondary" onClick={handleSyncLoyalty} style={{ flex: 1, padding: '8px 10px', fontSize: '0.8rem' }}>
-                    <CreditCard size={14} /> Flybuys Sync
-                  </button>
-                  <button className="btn btn-secondary" onClick={handleSyncLoyalty} style={{ flex: 1, padding: '8px 10px', fontSize: '0.8rem' }}>
-                    <CreditCard size={14} /> Rewards Sync
+                {/* Scan Actions & Queue */}
+                <div className="scan-actions-container" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {uploadedFiles.length > 0 && !ocrLoading && (
+                    <div className="uploaded-files-queue glass-panel animate-slide-up" style={{ padding: '12px' }}>
+                      <div style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--primary)', marginBottom: '8px' }}>
+                        Scan Queue ({uploadedFiles.length} file{uploadedFiles.length > 1 ? 's' : ''})
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '120px', overflowY: 'auto' }}>
+                        {uploadedFiles.map((file, idx) => (
+                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', background: 'rgba(255,255,255,0.03)', padding: '6px 8px', borderRadius: '4px' }}>
+                            <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '80%' }}>{file.name}</span>
+                            <Trash2 
+                              size={14} 
+                              style={{ color: 'var(--danger)', cursor: 'pointer' }} 
+                              onClick={() => handleRemoveFile(idx)} 
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <button 
+                    className="btn btn-primary" 
+                    onClick={handleScanDocuments} 
+                    disabled={ocrLoading || uploadedFiles.length === 0}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: 700 }}
+                  >
+                    <RefreshCw size={14} className={ocrLoading ? "animate-spin" : ""} /> 
+                    {ocrLoading ? "Scanning..." : "Scan Documents"}
                   </button>
                 </div>
+
+                {/* Loyalty card purchase history import */}
+                <div className="loyalty-sync-box">
+                  <span className="loyalty-title">Sync Loyalty Purchase History</span>
+                  <div className="loyalty-buttons">
+                    <button className="btn btn-secondary" onClick={handleSyncLoyalty} style={{ flex: 1, padding: '8px 10px', fontSize: '0.8rem' }}>
+                      <CreditCard size={14} /> Flybuys Sync
+                    </button>
+                    <button className="btn btn-secondary" onClick={handleSyncLoyalty} style={{ flex: 1, padding: '8px 10px', fontSize: '0.8rem' }}>
+                      <CreditCard size={14} /> Rewards Sync
+                    </button>
+                  </div>
+                </div>
               </div>
+
+              {/* Recommendations Box */}
+              {scannedReceipts.length > 0 && storeRecommendations && (
+                <div className="glass-panel recommendations-box animate-slide-up" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--border-glass)', paddingBottom: '10px' }}>
+                    <Trophy size={18} style={{ color: 'var(--blue-600)' }} />
+                    <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--primary)' }}>Recommendations</h3>
+                  </div>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    {renderCategoryCard(storeRecommendations.cheapestWeighted, "Cheapest Shop (Recurring)", "🏆", "var(--success)")}
+                    {renderCategoryCard(storeRecommendations.cheapestUnweighted, "Cheapest Overall (Average)", "💰", "var(--blue-500)")}
+                    {renderCategoryCard(storeRecommendations.nearestStore, "Nearest Shop", "📍", "var(--purple-500)")}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* RIGHT COLUMN: Comparison Engine Panel */}
@@ -996,18 +1119,10 @@ function DashboardPage({ user, onLogout }) {
                     <div>
                       <span className="rec-badge">Recommended Shop</span>
                       <h2 className="rec-title">
-                        {useSplitShop && comparison.isSplitRecommended ? (
-                          <>Shop <span className="rec-savings">Split Shop</span> this week</>
-                        ) : (
-                          <>Shop <span className="rec-savings">{comparison.winnerStore}</span> this week</>
-                        )}
+                        Shop <span className="rec-savings">{getStoreDisplayName(comparison.winnerStore)}</span> this week
                       </h2>
                       <p className="rec-split-highlight">
-                        {useSplitShop && comparison.isSplitRecommended ? (
-                          <>You'll save <strong style={{ color: 'var(--success)' }}>${comparison.totalSavings.toFixed(2)}</strong> this week by visiting both stores (saved an extra ${comparison.splitExtraSavings.toFixed(2)}).</>
-                        ) : (
-                          <>You'll save <strong style={{ color: 'var(--success)' }}>${comparison.singleStoreSavings.toFixed(2)}</strong> this week by shopping here.</>
-                        )}
+                        You'll save <strong style={{ color: 'var(--success)' }}>${comparison.singleStoreSavings.toFixed(2)}</strong> this week by shopping here.
                       </p>
                     </div>
                     <button className="btn btn-primary" onClick={handleCheckout} disabled={loading} style={{ padding: '14px 24px' }}>
@@ -1018,10 +1133,13 @@ function DashboardPage({ user, onLogout }) {
                   {/* Store cards grid */}
                   <div className="store-options-grid">
                     {/* Coles option */}
-                    <div className={`store-option-card ${(!comparison.isSplitRecommended || !useSplitShop) && comparison.winnerStore === 'Coles' ? 'winner' : ''}`}>
+                    <div className={`store-option-card ${comparison.winnerStore === 'Coles' ? 'winner' : ''}`}>
                       <div className="store-option-header">
-                        <span className="store-option-name" style={{ color: 'var(--primary)' }}>Coles</span>
-                        {(!comparison.isSplitRecommended || !useSplitShop) && comparison.winnerStore === 'Coles' && <span className="badge badge-success">Cheapest Single</span>}
+                        <span className="store-option-name" style={{ color: 'var(--primary)' }}>{getStoreDisplayName('Coles')}</span>
+                        {comparison.winnerStore === 'Coles' && <span className="badge badge-success">Cheapest</span>}
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
+                        <MapPin size={10} /> {getStoreAddress('Coles')}
                       </div>
                       <div className="store-option-total">${comparison.coles.adjustedTotal.toFixed(2)}</div>
                       <div className="store-option-breakdown">
@@ -1048,10 +1166,13 @@ function DashboardPage({ user, onLogout }) {
                     </div>
 
                     {/* Woolworths option */}
-                    <div className={`store-option-card ${(!comparison.isSplitRecommended || !useSplitShop) && comparison.winnerStore === 'Woolworths' ? 'winner' : ''}`}>
+                    <div className={`store-option-card ${comparison.winnerStore === 'Woolworths' ? 'winner' : ''}`}>
                       <div className="store-option-header">
-                        <span className="store-option-name" style={{ color: 'var(--primary)' }}>Woolworths</span>
-                        {(!comparison.isSplitRecommended || !useSplitShop) && comparison.winnerStore === 'Woolworths' && <span className="badge badge-success">Cheapest Single</span>}
+                        <span className="store-option-name" style={{ color: 'var(--primary)' }}>{getStoreDisplayName('Woolworths')}</span>
+                        {comparison.winnerStore === 'Woolworths' && <span className="badge badge-success">Cheapest</span>}
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
+                        <MapPin size={10} /> {getStoreAddress('Woolworths')}
                       </div>
                       <div className="store-option-total">${comparison.woolworths.adjustedTotal.toFixed(2)}</div>
                       <div className="store-option-breakdown">
@@ -1076,53 +1197,7 @@ function DashboardPage({ user, onLogout }) {
                         </div>
                       </div>
                     </div>
-
-                    {/* Split Shop option */}
-                    <div className={`store-option-card ${comparison.isSplitRecommended && useSplitShop ? 'winner' : ''}`}>
-                      <div className="store-option-header">
-                        <span className="store-option-name" style={{ color: 'var(--primary)' }}>Split Shop</span>
-                        {comparison.isSplitRecommended && useSplitShop && <span className="badge badge-success">Best Option</span>}
-                      </div>
-                      <div className="store-option-total">${comparison.split.adjustedTotal.toFixed(2)}</div>
-                      <div className="store-option-breakdown">
-                        <div className="breakdown-row">
-                          <span>Shelf Items Total</span>
-                          <span>${comparison.split.shelfTotal.toFixed(2)}</span>
-                        </div>
-                        <div className="breakdown-row">
-                          <span>Travel/Fuel (Both)</span>
-                          <span>+${comparison.split.fuelAdjustment.toFixed(2)}</span>
-                        </div>
-                        <div className="breakdown-row">
-                          <span>Loyalty cards savings</span>
-                          <span style={{ color: 'var(--success)' }}>-${comparison.split.rewardsValue.toFixed(2)}</span>
-                        </div>
-                        <div className="breakdown-row" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '6px', marginTop: '4px' }}>
-                          <span>Combined stock risk</span>
-                          <span>{comparison.split.stockRiskPercentage}%</span>
-                        </div>
-                      </div>
-                    </div>
                   </div>
-
-                  {/* Split Shop recommendation panel toggle */}
-                  {comparison.isSplitRecommended && (
-                    <div className="split-shop-selector animate-fade-in">
-                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                        <input 
-                          type="checkbox" 
-                          id="chk-split" 
-                          checked={useSplitShop} 
-                          onChange={(e) => setUseSplitShop(e.target.checked)}
-                          style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                        />
-                        <label htmlFor="chk-split" style={{ fontWeight: 600, fontSize: '0.92rem', cursor: 'pointer' }}>
-                          Enable Split Shopping suggestion (Saves extra ${comparison.splitExtraSavings.toFixed(2)})
-                        </label>
-                      </div>
-                      <span className="badge badge-special">Recommended</span>
-                    </div>
-                  )}
 
                   {/* Item-by-item comparison table */}
                   <div className="glass-panel breakdown-card">
@@ -1132,8 +1207,8 @@ function DashboardPage({ user, onLogout }) {
                         <thead>
                           <tr>
                             <th>Item Name</th>
-                            <th>Coles</th>
-                            <th>Woolworths</th>
+                            <th>{getStoreDisplayName('Coles')}</th>
+                            <th>{getStoreDisplayName('Woolworths')}</th>
                             <th>Stock Reliability</th>
                           </tr>
                         </thead>
@@ -1152,10 +1227,6 @@ function DashboardPage({ user, onLogout }) {
                             const colesCheaper = colesPrice <= wooliesPrice;
                             const wooliesCheaper = wooliesPrice < colesPrice;
 
-                            // Split shop highlight
-                            const boughtAtColes = useSplitShop && comparison.isSplitRecommended && colesPrice <= wooliesPrice;
-                            const boughtAtWoolies = useSplitShop && comparison.isSplitRecommended && wooliesPrice < colesPrice;
-
                             const cIsSpecial = cItem.isSpecial || cItem.IsSpecial;
                             const wIsSpecial = wItem.isSpecial || wItem.IsSpecial;
 
@@ -1163,10 +1234,7 @@ function DashboardPage({ user, onLogout }) {
                             const wStockRisk = wMatched.outOfStockProbability || 0;
 
                             return (
-                              <tr 
-                                key={idx} 
-                                className={boughtAtColes ? 'table-row-split-coles' : (boughtAtWoolies ? 'table-row-split-woolies' : '')}
-                              >
+                              <tr key={idx}>
                                 <td>
                                   <div style={{ display: 'flex', flexDirection: 'column' }}>
                                     <span style={{ fontWeight: 600 }}>{item.itemName}</span>
@@ -1202,7 +1270,6 @@ function DashboardPage({ user, onLogout }) {
                                     <div style={{ fontSize: '0.8rem' }}>
                                       C: {Math.round((1 - cStockRisk) * 100)}% | W: {Math.round((1 - wStockRisk) * 100)}%
                                     </div>
-                                    {/* Warn high out of stock risk on specials */}
                                     {((cIsSpecial && cStockRisk > 0.1) || (wIsSpecial && wStockRisk > 0.1)) && (
                                       <span className="stock-risk-indicator" style={{ fontSize: '0.68rem' }}>
                                         <AlertTriangle size={10} /> Special stock risk
@@ -1218,81 +1285,33 @@ function DashboardPage({ user, onLogout }) {
                     </div>
                   </div>
 
-                  {/* Top 5 recommended stores list */}
-                  {storeRecommendations && (
+                  {/* Scanned Receipts Summary */}
+                  {scannedReceipts.length > 0 && (
                     <div className="glass-panel breakdown-card" style={{ marginTop: '24px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                        <Trophy size={18} style={{ color: 'var(--blue-600)' }} />
-                        <h3 style={{ margin: 0, fontSize: '1rem' }}>Top Store Recommendations (All Retailers)</h3>
+                        <Receipt size={18} style={{ color: 'var(--blue-600)' }} />
+                        <h3 style={{ margin: 0, fontSize: '1rem' }}>Scanned Receipts</h3>
                       </div>
-                      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
-                        Ranked by product savings, special catalog prices, and travel distance relative to your address.
-                      </p>
-                      
-                      <div className="rec-two-col" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
-                        {storeRecommendations.topByWeightedSavings.slice(0, 5).map((store, idx) => {
-                          const prox = storeRecommendations.topByProximity.find(p => p.storeName === store.storeName);
-                          return (
-                            <div key={store.storeName} className={`store-rank-card ${idx === 0 ? 'store-rank-card--winner' : ''}`} style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: 'var(--bg-white)', border: '1px solid var(--divider)', borderRadius: '10px', padding: '12px' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  <span className={`rank-badge rank-badge--${idx + 1}`} style={{ width: '22px', height: '22px', fontSize: '0.7rem' }}>#{idx + 1}</span>
-                                  <span style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--primary)' }}>{store.storeName}</span>
-                                </div>
-                                {store.estimatedWeeklySaving > 0 ? (
-                                  <span className="savings-chip" style={{ fontSize: '0.75rem', padding: '2px 6px' }}>${store.estimatedWeeklySaving.toFixed(2)} saved</span>
-                                ) : (
-                                  <span className="savings-chip" style={{ fontSize: '0.75rem', padding: '2px 6px', background: 'rgba(100,116,139,0.1)', color: 'var(--text-muted)' }}>$0.00 saved</span>
-                                )}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {scannedReceipts.map((receipt) => (
+                          <div key={receipt.id} className="glass-panel" style={{ padding: '12px', border: '1px solid var(--border-glass)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <MapPin size={14} style={{ color: 'var(--blue-500)' }} />
+                                <span style={{ fontWeight: 700, color: 'var(--primary)' }}>{receipt.storeDisplayName}</span>
                               </div>
-
-                              {prox && (
-                                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                  <Navigation size={10} style={{ color: 'var(--blue-500)' }} />
-                                  <span>{prox.proximitySummary || `${prox.distanceKm} km`}</span>
-                                </div>
-                              )}
-
-                              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <MapPin size={10} style={{ color: 'var(--blue-500)' }} />
-                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={getStoreAddress(store.storeName)}>{getStoreAddress(store.storeName)}</span>
-                              </div>
-
-                              {store.specialDiscounts && store.specialDiscounts.length > 0 && (
-                                <div style={{ marginTop: '4px' }}>
-                                  <div style={{ fontSize: '0.7rem', color: 'var(--danger)', marginBottom: '2px', fontWeight: 'bold' }}>🏷️ Specials:</div>
-                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                                    {store.specialDiscounts.map(d => (
-                                      <span key={d} style={{ background: 'rgba(239, 68, 68, 0.08)', color: 'var(--danger)', border: '1px solid rgba(239, 68, 68, 0.15)', padding: '1px 4px', borderRadius: '3px', fontSize: '0.65rem' }}>{d}</span>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              <a
-                                href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(preferences.homeAddress || 'Richmond VIC')}&destination=${encodeURIComponent(getStoreAddress(store.storeName))}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{
-                                  marginTop: '6px',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  fontSize: '0.72rem',
-                                  padding: '4px 8px',
-                                  background: 'rgba(59, 130, 246, 0.08)',
-                                  color: 'var(--blue-600)',
-                                  border: '1px solid rgba(59, 130, 246, 0.18)',
-                                  borderRadius: '4px',
-                                  textDecoration: 'none',
-                                  width: 'fit-content'
-                                }}
-                              >
-                                <Navigation size={10} /> View in Google Maps
-                              </a>
+                              <span style={{ fontWeight: 700, fontSize: '1rem' }}>${(receipt.receiptTotal || 0).toFixed(2)}</span>
                             </div>
-                          );
-                        })}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              {receipt.items.map((item, i) => (
+                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: 'var(--text-muted)', padding: '2px 0' }}>
+                                  <span>{item.itemName} {item.quantity > 1 ? `x${item.quantity}` : ''}</span>
+                                  <span>${(item.totalPrice || 0).toFixed(2)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
@@ -1391,6 +1410,34 @@ function DashboardPage({ user, onLogout }) {
               </h3>
               
               <form className="settings-form" onSubmit={handleSavePreferences}>
+
+                {/* City / Region */}
+                <div className="slider-group" style={{ marginBottom: '24px' }}>
+                  <div className="slider-labels" style={{ marginBottom: '8px' }}>
+                    <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <MapPin size={14} style={{ color: 'var(--blue-600)' }} /> Your City / Region
+                    </label>
+                  </div>
+                  <select
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border-glass)', background: 'rgba(255,255,255,0.05)', color: 'var(--primary)', cursor: 'pointer' }}
+                    value={preferences.region || 'Melbourne'}
+                    onChange={(e) => setPreferences({ ...preferences, region: e.target.value })}
+                  >
+                    <option value="Melbourne">Melbourne, VIC</option>
+                    <option value="Sydney">Sydney, NSW</option>
+                    <option value="Brisbane">Brisbane, QLD</option>
+                    <option value="Perth">Perth, WA</option>
+                    <option value="Adelaide">Adelaide, SA</option>
+                    <option value="Gold Coast">Gold Coast, QLD</option>
+                    <option value="Canberra">Canberra, ACT</option>
+                    <option value="Hobart">Hobart, TAS</option>
+                    <option value="Darwin">Darwin, NT</option>
+                  </select>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    Only stores with branches in your city will appear in recommendations
+                  </span>
+                </div>
                 
                 {/* Home Address */}
                 <div className="slider-group" style={{ marginBottom: '24px' }}>
@@ -1496,28 +1543,6 @@ function DashboardPage({ user, onLogout }) {
                   </div>
                 </div>
 
-                {/* Minimum saving split threshold */}
-                <div className="slider-group">
-                  <div className="slider-labels">
-                    <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      Split Shop Threshold
-                    </label>
-                    <span style={{ fontWeight: 700 }}>${preferences.minSplitSavingThreshold.toFixed(2)}</span>
-                  </div>
-                  <input 
-                    type="range" 
-                    min="1" 
-                    max="15" 
-                    step="0.5"
-                    className="pref-slider"
-                    value={preferences.minSplitSavingThreshold}
-                    onChange={(e) => setPreferences({ ...preferences, minSplitSavingThreshold: parseFloat(e.target.value) })}
-                  />
-                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                    Only suggest split shopping if the adjusted savings exceed this threshold (justifies two trips)
-                  </span>
-                </div>
-
                 <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: 'fit-content', padding: '12px 28px', marginTop: '8px' }}>
                   {loading ? 'Saving Settings...' : 'Save Settings'}
                 </button>
@@ -1532,9 +1557,9 @@ function DashboardPage({ user, onLogout }) {
             {recommendationsLoading ? (
               <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>
                 <RefreshCw size={32} style={{ animation: 'spin 1s linear infinite' }} />
-                <p style={{ marginTop: '12px' }}>Running 6-phase store analysis…</p>
+                <p style={{ marginTop: '12px' }}>Running store analysis…</p>
               </div>
-            ) : (shoppingList.length > 0 && storeRecommendations) ? (
+            ) : storeRecommendations ? (
               <div className="recommendations-tab">
 
                 {/* Trade-Off Banner */}
@@ -1548,205 +1573,118 @@ function DashboardPage({ user, onLogout }) {
                   </div>
                 )}
 
-                <div className="rec-two-col">
-                  {/* ── LEFT: Top 5 by Savings ─────────────────────────────── */}
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                      <Trophy size={20} style={{ color: 'var(--blue-600)' }} />
-                      <h3 style={{ margin: 0 }}>Top Stores by Savings</h3>
-                    </div>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
-                      Ranked by weighted score — winning your most-purchased items counts more than winning rarely-bought ones.
-                    </p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      {storeRecommendations.topByWeightedSavings.map((store, idx) => {
-                        const prox = storeRecommendations.topByProximity.find(p => p.storeName === store.storeName);
-                        return (
-                          <div key={store.storeName} className={`store-rank-card glass-panel ${idx === 0 ? 'store-rank-card--winner' : ''}`} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <div className="store-rank-card__header">
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <span className={`rank-badge rank-badge--${idx + 1}`}>#{idx + 1}</span>
-                                <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--primary)' }}>{store.storeName}</span>
-                              </div>
-                              {store.estimatedWeeklySaving > 0 ? (
-                                <span className="savings-chip">${store.estimatedWeeklySaving.toFixed(2)} saved</span>
-                              ) : (
-                                <span className="savings-chip" style={{ background: 'rgba(100,116,139,0.1)', color: 'var(--text-muted)' }}>$0.00 saved</span>
-                              )}
-                            </div>
-                            
-                            {/* Proximity info */}
-                            {prox && (
-                              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <Navigation size={12} style={{ color: 'var(--blue-500)' }} />
-                                <span>Distance: {prox.proximitySummary || `${prox.distanceKm} km`}</span>
-                              </div>
-                            )}
-
-                            {/* Location Address */}
-                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <MapPin size={12} style={{ color: 'var(--blue-500)' }} />
-                              <span>{getStoreAddress(store.storeName)}</span>
-                            </div>
-
-                            {/* Winning Products */}
-                            {store.winningProducts && store.winningProducts.length > 0 && (
-                              <div style={{ marginTop: '4px' }}>
-                                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Wins your:</div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                                  {store.winningProducts.map(p => (
-                                    <span key={p} className="product-win-tag">{p}</span>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Active Discounts / Specials */}
-                            {store.specialDiscounts && store.specialDiscounts.length > 0 ? (
-                              <div style={{ marginTop: '4px' }}>
-                                <div style={{ fontSize: '0.72rem', color: 'var(--danger)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 'bold' }}>🏷️ Active Discounts:</div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                                  {store.specialDiscounts.map(d => (
-                                    <span key={d} className="product-discount-tag" style={{ background: 'rgba(239, 68, 68, 0.08)', color: 'var(--danger)', border: '1px solid rgba(239, 68, 68, 0.15)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem' }}>{d}</span>
-                                  ))}
-                                </div>
-                              </div>
-                            ) : (
-                              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '4px' }}>No active specials on your items</div>
-                            )}
-
-                            {/* Google Maps View Button */}
-                            <a
-                              href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(preferences.homeAddress || 'Richmond VIC')}&destination=${encodeURIComponent(getStoreAddress(store.storeName))}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="btn btn-secondary btn-sm"
-                              style={{
-                                marginTop: '8px',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                fontSize: '0.78rem',
-                                padding: '6px 12px',
-                                background: 'rgba(59, 130, 246, 0.08)',
-                                color: 'var(--blue-600)',
-                                border: '1px solid rgba(59, 130, 246, 0.18)',
-                                borderRadius: '6px',
-                                textDecoration: 'none',
-                                width: 'fit-content'
-                              }}
-                            >
-                              <Navigation size={12} /> View in Google Maps
-                            </a>
-                          </div>
-                        );
-                      })}
-                    </div>
+                {/* Recommended Shops */}
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                    <Trophy size={20} style={{ color: 'var(--blue-600)' }} />
+                    <h3 style={{ margin: 0 }}>Recommended Shops</h3>
                   </div>
-
-                  {/* ── RIGHT: Top 5 by Proximity ──────────────────────────── */}
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                      <MapPin size={20} style={{ color: 'var(--blue-600)' }} />
-                      <h3 style={{ margin: 0 }}>Top Stores by Distance</h3>
-                    </div>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
-                      Sorted by proximity to your home address.
-                    </p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      {storeRecommendations.topByProximity.map((store, idx) => {
-                        const savingsObj = storeRecommendations.topByWeightedSavings.find(s => s.storeName === store.storeName);
-                        return (
-                          <div key={store.storeName} className="store-rank-card glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <div className="store-rank-card__header">
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <span className={`rank-badge rank-badge--${idx + 1}`}>#{idx + 1}</span>
-                                <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--primary)' }}>{store.storeName}</span>
-                              </div>
-                              <span className="proximity-chip">
-                                <MapPin size={12} /> {store.proximitySummary || `${store.distanceKm} km`}
-                              </span>
-                            </div>
-
-                            {/* Savings Info */}
-                            {savingsObj && (
-                              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <Trophy size={12} style={{ color: 'var(--blue-500)' }} />
-                                <span>Estimated Savings: <strong style={{ color: 'var(--success)' }}>${savingsObj.estimatedWeeklySaving.toFixed(2)}</strong></span>
-                              </div>
-                            )}
-
-                            {/* Location Address */}
-                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <MapPin size={12} style={{ color: 'var(--blue-500)' }} />
-                              <span>{getStoreAddress(store.storeName)}</span>
-                            </div>
-
-                            {/* Active Discounts / Specials */}
-                            {savingsObj && savingsObj.specialDiscounts && savingsObj.specialDiscounts.length > 0 ? (
-                              <div style={{ marginTop: '4px' }}>
-                                <div style={{ fontSize: '0.72rem', color: 'var(--danger)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 'bold' }}>🏷️ Active Discounts:</div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                                  {savingsObj.specialDiscounts.map(d => (
-                                    <span key={d} className="product-discount-tag" style={{ background: 'rgba(239, 68, 68, 0.08)', color: 'var(--danger)', border: '1px solid rgba(239, 68, 68, 0.15)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem' }}>{d}</span>
-                                  ))}
-                                </div>
-                              </div>
-                            ) : (
-                              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '4px' }}>No active specials on your items</div>
-                            )}
-
-                            {/* Google Maps View Button */}
-                            <a
-                              href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(preferences.homeAddress || 'Richmond VIC')}&destination=${encodeURIComponent(getStoreAddress(store.storeName))}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="btn btn-secondary btn-sm"
-                              style={{
-                                marginTop: '8px',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                fontSize: '0.78rem',
-                                padding: '6px 12px',
-                                background: 'rgba(59, 130, 246, 0.08)',
-                                color: 'var(--blue-600)',
-                                border: '1px solid rgba(59, 130, 246, 0.18)',
-                                borderRadius: '6px',
-                                textDecoration: 'none',
-                                width: 'fit-content'
-                              }}
-                            >
-                              <Navigation size={12} /> View in Google Maps
-                            </a>
-                          </div>
-                        );
-                      })}
-                    </div>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                    Personalized store recommendations categorized by recurring item savings, overall average cost, and proximity.
+                  </p>
+                  
+                  <div className="recommendations-categories-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+                    {renderCategoryCard(storeRecommendations.cheapestWeighted, "Cheapest Shop (Recurring)", "🏆", "var(--success)")}
+                    {renderCategoryCard(storeRecommendations.cheapestUnweighted, "Cheapest Overall (Average)", "💰", "var(--blue-500)")}
+                    {renderCategoryCard(storeRecommendations.nearestStore, "Nearest Shop", "📍", "var(--purple-500)")}
                   </div>
                 </div>
 
-                {/* Split Shop Suggestion */}
-                {storeRecommendations.splitShopSuggestion && (
-                  <div className="split-suggestion-box glass-panel animate-slide-up">
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                      <ArrowRight size={20} style={{ color: 'var(--blue-600)', flexShrink: 0, marginTop: '2px' }} />
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--primary)', marginBottom: '6px' }}>
-                          💡 Split-Shop Opportunity
-                        </div>
-                        <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-charcoal)', lineHeight: 1.5 }}>
-                          {storeRecommendations.splitShopSuggestion.narrative}
-                        </p>
-                        <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                          {storeRecommendations.splitShopSuggestion.primaryItems.map(p => (
-                            <span key={p} className="product-win-tag product-win-tag--split">{p}</span>
-                          ))}
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', alignSelf: 'center' }}>
-                            → at {storeRecommendations.splitShopSuggestion.primaryStore}
-                          </span>
-                        </div>
-                      </div>
+                {/* Itemized Price Comparison Table for Recommended Shops */}
+                {storeRecommendations.itemComparisons && storeRecommendations.itemComparisons.length > 0 ? (
+                  <div className="glass-panel breakdown-card">
+                    <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>Itemized Comparison — Recommended Shops</h3>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                      Price comparison for your most-purchased items across all recommended stores. Cheapest price per item is highlighted.
+                    </p>
+                    <div className="breakdown-table-wrapper">
+                      <table className="breakdown-table">
+                        <thead>
+                          <tr>
+                            <th>Item</th>
+                            {storeRecommendations.topByWeightedSavings.map(s => (
+                              <th key={s.storeName}>{getStoreDisplayName(s.storeName)}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {storeRecommendations.itemComparisons.map((item, idx) => {
+                            const cheapest = item.cheapestStore;
+                            return (
+                              <tr key={idx}>
+                                <td>
+                                  <span style={{ fontWeight: 600 }}>{item.productName}</span>
+                                </td>
+                                {storeRecommendations.topByWeightedSavings.map(s => {
+                                  const priceData = item.storePrices?.[s.storeName];
+                                  const isCheapest = s.storeName === cheapest;
+                                  return (
+                                    <td key={s.storeName}>
+                                      {priceData ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                          <span className={isCheapest ? 'best-price-highlight' : ''}>
+                                            ${priceData.price.toFixed(2)}
+                                          </span>
+                                          {priceData.packageSize && (
+                                            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                                              {priceData.packageSize}
+                                            </span>
+                                          )}
+                                          {priceData.isSpecial && (
+                                            <span className="badge badge-special" style={{ fontSize: '0.6rem', padding: '2px 4px', width: 'fit-content' }}>
+                                              {priceData.specialDetails || 'Special'}
+                                            </span>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>—</span>
+                                      )}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="glass-panel breakdown-card">
+                    <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>Itemized Comparison — Recommended Shops</h3>
+                    <div className="breakdown-table-wrapper">
+                      <table className="breakdown-table">
+                        <thead>
+                          <tr>
+                            <th>Item</th>
+                            {storeRecommendations.topByWeightedSavings.map(s => (
+                              <th key={s.storeName}>{getStoreDisplayName(s.storeName)}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {storeRecommendations.productRankings.slice(0, 8).map((p, idx) => {
+                            const storeNames = storeRecommendations.topByWeightedSavings.map(s => s.storeName);
+                            return (
+                              <tr key={idx}>
+                                <td><span style={{ fontWeight: 600 }}>{p.productName}</span></td>
+                                {storeNames.map(sn => {
+                                  const isWinner = storeRecommendations.topByWeightedSavings
+                                    .find(s => s.storeName === sn)?.winningProducts
+                                    ?.some(wp => wp.toLowerCase().includes(p.productName.toLowerCase().split(' ')[0]));
+                                  return (
+                                    <td key={sn}>
+                                      <span className={isWinner ? 'best-price-highlight' : ''} style={{ fontSize: '0.82rem' }}>
+                                        {isWinner ? 'Best' : '—'}
+                                      </span>
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 )}
@@ -1785,7 +1723,7 @@ function DashboardPage({ user, onLogout }) {
             ) : (
               <div style={{ textAlign: 'center', padding: '80px', color: 'var(--text-muted)' }}>
                 <Trophy size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
-                <p>Add items to your shopping list and upload receipts to generate your personalised store ranking.</p>
+                <p>Upload receipts to generate your personalised store ranking.</p>
               </div>
             )}
           </div>

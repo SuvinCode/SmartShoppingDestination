@@ -4,3 +4,4 @@ pydantic==2.7.4
 rapidfuzz==3.9.3
 pillow==10.3.0
 python-multipart==0.0.9
+pytesseract==0.3.13

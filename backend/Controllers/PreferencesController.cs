@@ -45,7 +45,8 @@ namespace backend.Controllers
                     dto.FuelCostPerKm,
                     dto.HasFlybuys,
                     dto.HasEverydayRewards,
-                    dto.MinSplitSavingThreshold
+                    dto.MinSplitSavingThreshold,
+                    dto.Region
                 );
                 _context.UserPreferences.Add(prefs);
             }
@@ -57,7 +58,8 @@ namespace backend.Controllers
                     dto.FuelCostPerKm,
                     dto.HasFlybuys,
                     dto.HasEverydayRewards,
-                    dto.MinSplitSavingThreshold
+                    dto.MinSplitSavingThreshold,
+                    dto.Region
                 );
             }
 
@@ -74,5 +76,6 @@ namespace backend.Controllers
         public bool HasFlybuys { get; set; }
         public bool HasEverydayRewards { get; set; }
         public decimal MinSplitSavingThreshold { get; set; }
+        public string Region { get; set; } = "Melbourne";
     }
 }

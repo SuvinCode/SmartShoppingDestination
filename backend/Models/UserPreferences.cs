@@ -8,10 +8,11 @@ namespace backend.Models
         public int UserId { get; private set; }
         public double DistanceToColesKm { get; private set; } = 5.0;
         public double DistanceToWoolworthsKm { get; private set; } = 4.0;
-        public decimal FuelCostPerKm { get; private set; } = 0.15M; // $ per km
+        public decimal FuelCostPerKm { get; private set; } = 0.15M;
         public bool HasFlybuys { get; private set; } = false;
         public bool HasEverydayRewards { get; private set; } = false;
-        public decimal MinSplitSavingThreshold { get; private set; } = 5.00M; // only suggest split shop if it saves > $5
+        public decimal MinSplitSavingThreshold { get; private set; } = 5.00M;
+        public string Region { get; private set; } = "Melbourne";
 
         private UserPreferences() { } // For EF Core
 
@@ -22,7 +23,7 @@ namespace backend.Models
             UserId = userId;
         }
 
-        public void UpdatePreferences(double distanceColes, double distanceWoolies, decimal fuelCost, bool hasFlybuys, bool hasRewards, decimal minSplitSaving)
+        public void UpdatePreferences(double distanceColes, double distanceWoolies, decimal fuelCost, bool hasFlybuys, bool hasRewards, decimal minSplitSaving, string region = "Melbourne")
         {
             if (distanceColes < 0 || distanceWoolies < 0)
                 throw new ArgumentException("Distance cannot be negative");
@@ -37,6 +38,7 @@ namespace backend.Models
             HasFlybuys = hasFlybuys;
             HasEverydayRewards = hasRewards;
             MinSplitSavingThreshold = minSplitSaving;
+            Region = string.IsNullOrWhiteSpace(region) ? "Melbourne" : region.Trim();
         }
 
         public decimal CalculateColesTravelCost()

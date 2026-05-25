@@ -893,3 +893,25 @@
   box-shadow: 0 4px 14px rgba(45, 155, 90, 0.05);
 }
 
+/* Recommendations target categories styles */
+.recommendations-box {
+  background-color: var(--bg-white);
+  border: 1px solid var(--divider);
+}
+
+.category-rec-card {
+  transition: all var(--transition-normal) !important;
+  border: 1px solid var(--divider) !important;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.02);
+}
+
+.category-rec-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+  border-color: var(--blue-400) !important;
+}
+
+.recommendations-categories-grid {
+  margin-top: 10px;
+}
+

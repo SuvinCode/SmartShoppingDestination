@@ -114,9 +114,8 @@ namespace backend.Controllers
             var ocrResult = await _aiClient.ExtractReceiptItemsAsync(stream, file.FileName);
             
             // 2. Map OCR raw item names to database catalog items using python fuzzy matcher
-            var matchedItems = new List<ShoppingListItem>();
+            var matchedItems = new List<object>();
             
-            // Get all generic candidates from DB to send for fuzzy matching
             var dbCandidates = _context.CatalogItems
                 .Select(i => new { i.Id, i.Name })
                 .ToList()
@@ -141,65 +140,43 @@ namespace backend.Controllers
                     genericName = matchResult.Matches.First().Candidate.Name;
                 }
 
-                var newItem = new ShoppingListItem(userId, genericName, ocrItem.Quantity, "");
-                
+                string packageSize = "";
                 var dbMatch = _context.CatalogItems.FirstOrDefault(c => c.Name.ToLower().Contains(genericName.ToLower()));
                 if (dbMatch != null)
                 {
-                    newItem.SetPackageSize(dbMatch.PackageSize);
+                    packageSize = dbMatch.PackageSize;
                 }
-                
-                matchedItems.Add(newItem);
+
+                // Save to purchase history only (for recommendation engine rankings)
+                var histItem = new ShoppingListItem(userId, genericName, ocrItem.Quantity, packageSize);
+                histItem.ToggleCompletion();
+                _context.ShoppingListItems.Add(histItem);
+
+                matchedItems.Add(new {
+                    itemName = genericName,
+                    quantity = ocrItem.Quantity,
+                    unitPrice = ocrItem.UnitPrice,
+                    totalPrice = ocrItem.TotalPrice,
+                    packageSize
+                });
             }
 
-            if (matchedItems.Any())
-            {
-                // 1. Save completed copies of each item to the user's purchase history (for product ranking)
-                var historyItems = matchedItems.Select(item => {
-                    var hist = new ShoppingListItem(item.UserId, item.ItemName, item.Quantity, item.PackageSize);
-                    hist.ToggleCompletion(); // Mark as completed (history)
-                    return hist;
-                }).ToList();
-                _context.ShoppingListItems.AddRange(historyItems);
+            _context.SaveChanges();
 
-                // 2. Append/update items in the user's active shopping list (IsCompleted = false)
-                foreach (var item in matchedItems)
-                {
-                    var existing = _context.ShoppingListItems
-                        .FirstOrDefault(i => i.UserId == userId && !i.IsCompleted && i.ItemName.ToLower() == item.ItemName.ToLower());
-                    if (existing != null)
-                    {
-                        existing.UpdateQuantity(existing.Quantity + item.Quantity);
-                    }
-                    else
-                    {
-                        _context.ShoppingListItems.Add(item);
-                    }
-                }
-                
-                _context.SaveChanges();
-            }
-
-            var prefs = _context.UserPreferences.FirstOrDefault(p => p.UserId == userId);
-            if (prefs == null)
-            {
-                prefs = new UserPreferences(userId);
-            }
-
-            double distance = 0.0;
             string storeName = ocrResult.StoreDetected ?? "Unknown";
-            if (storeName.Equals("Coles", StringComparison.OrdinalIgnoreCase))
-                distance = prefs.DistanceToColesKm;
-            else if (storeName.Equals("Woolworths", StringComparison.OrdinalIgnoreCase))
-                distance = prefs.DistanceToWoolworthsKm;
-            else if (storeName.Equals("Aldi", StringComparison.OrdinalIgnoreCase))
-                distance = Math.Round((prefs.DistanceToColesKm + prefs.DistanceToWoolworthsKm) / 2.0 + 2.5, 1);
-            else if (storeName.Equals("IGA", StringComparison.OrdinalIgnoreCase))
-                distance = Math.Max(0.5, Math.Round((prefs.DistanceToColesKm + prefs.DistanceToWoolworthsKm) / 2.0 - 0.5, 1));
-            else if (storeName.Equals("Costco", StringComparison.OrdinalIgnoreCase))
-                distance = 18.0;
+            string storeLocation = ocrResult.StoreLocation ?? "";
+            string displayName = string.IsNullOrEmpty(storeLocation)
+                ? storeName
+                : $"{storeName} {storeLocation}";
 
-            return Ok(new { store = ocrResult.StoreDetected, rawText = ocrResult.RawText, items = matchedItems, distance });
+            return Ok(new {
+                store = storeName,
+                storeLocation,
+                storeDisplayName = displayName,
+                receiptTotal = ocrResult.ReceiptTotal,
+                items = matchedItems,
+                rawText = ocrResult.RawText
+            });
         }
 
         [HttpPost("compare")]

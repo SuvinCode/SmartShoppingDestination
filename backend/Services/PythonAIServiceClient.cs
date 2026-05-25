@@ -91,8 +91,14 @@ namespace backend.Services
         [System.Text.Json.Serialization.JsonPropertyName("store_detected")]
         public string StoreDetected { get; set; } = "";
 
+        [System.Text.Json.Serialization.JsonPropertyName("store_location")]
+        public string StoreLocation { get; set; } = "";
+
         [System.Text.Json.Serialization.JsonPropertyName("items")]
         public List<OcrItem> Items { get; set; } = new();
+
+        [System.Text.Json.Serialization.JsonPropertyName("receipt_total")]
+        public decimal? ReceiptTotal { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("raw_text")]
         public string RawText { get; set; } = "";

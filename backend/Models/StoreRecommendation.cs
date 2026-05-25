@@ -113,6 +113,86 @@ namespace backend.Models
     }
 
     /// <summary>
+    /// Per-item price detail at a specific store.
+    /// </summary>
+    public class ItemPriceDetail
+    {
+        public decimal Price { get; set; }
+        public bool IsSpecial { get; set; }
+        public string SpecialDetails { get; set; } = "";
+        public string PackageSize { get; set; } = "";
+
+        public ItemPriceDetail() { }
+
+        public ItemPriceDetail(decimal price, bool isSpecial, string specialDetails, string packageSize)
+        {
+            Price = price;
+            IsSpecial = isSpecial;
+            SpecialDetails = specialDetails ?? "";
+            PackageSize = packageSize ?? "";
+        }
+    }
+
+    /// <summary>
+    /// Cross-store price comparison for a single product.
+    /// </summary>
+    public class ItemPriceComparison
+    {
+        public string ProductName { get; set; } = "";
+        public Dictionary<string, ItemPriceDetail> StorePrices { get; set; } = new();
+        public string CheapestStore { get; set; } = "";
+
+        public ItemPriceComparison() { }
+
+        public ItemPriceComparison(string productName, Dictionary<string, ItemPriceDetail> storePrices)
+        {
+            ProductName = productName ?? "";
+            StorePrices = storePrices ?? new();
+            if (StorePrices.Any())
+            {
+                CheapestStore = StorePrices.OrderBy(kv => kv.Value.Price).First().Key;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Represents one of the 3 targeted recommendation categories.
+    /// </summary>
+    public class CategoryRecommendation
+    {
+        public string StoreName { get; set; } = "";
+        public string CategoryName { get; set; } = "";
+        public string MetricLabel { get; set; } = "";
+        public string MetricValue { get; set; } = "";
+        public string Explanation { get; set; } = "";
+        public double DistanceKm { get; set; }
+        public List<string> WinningProducts { get; set; } = new();
+        public List<string> SpecialDiscounts { get; set; } = new();
+
+        public CategoryRecommendation() { }
+
+        public CategoryRecommendation(
+            string storeName, 
+            string categoryName, 
+            string metricLabel, 
+            string metricValue, 
+            string explanation, 
+            double distanceKm, 
+            List<string> winningProducts, 
+            List<string> specialDiscounts)
+        {
+            StoreName = storeName ?? "";
+            CategoryName = categoryName ?? "";
+            MetricLabel = metricLabel ?? "";
+            MetricValue = metricValue ?? "";
+            Explanation = explanation ?? "";
+            DistanceKm = distanceKm;
+            WinningProducts = winningProducts ?? new();
+            SpecialDiscounts = specialDiscounts ?? new();
+        }
+    }
+
+    /// <summary>
     /// Top-level output of the 6-phase recommendation engine returned by the API.
     /// </summary>
     public class StoreRecommendationResult
@@ -121,7 +201,10 @@ namespace backend.Models
         public List<StoreSavingsResult> TopByWeightedSavings { get; private set; } = new();
         public List<ProximityResult> TopByProximity { get; private set; } = new();
         public string TradeOffNarrative { get; private set; } = "";
-        public SplitShopSuggestion? SplitShopSuggestion { get; private set; }
+        public List<ItemPriceComparison> ItemComparisons { get; private set; } = new();
+        public CategoryRecommendation CheapestWeighted { get; private set; } = new();
+        public CategoryRecommendation CheapestUnweighted { get; private set; } = new();
+        public CategoryRecommendation NearestStore { get; private set; } = new();
 
         private StoreRecommendationResult() { }
 
@@ -130,13 +213,19 @@ namespace backend.Models
             List<StoreSavingsResult> topByWeightedSavings,
             List<ProximityResult> topByProximity,
             string tradeOffNarrative,
-            SplitShopSuggestion? splitShopSuggestion = null)
+            List<ItemPriceComparison>? itemComparisons = null,
+            CategoryRecommendation? cheapestWeighted = null,
+            CategoryRecommendation? cheapestUnweighted = null,
+            CategoryRecommendation? nearestStore = null)
         {
             ProductRankings = productRankings ?? new();
             TopByWeightedSavings = topByWeightedSavings ?? new();
             TopByProximity = topByProximity ?? new();
             TradeOffNarrative = tradeOffNarrative ?? "";
-            SplitShopSuggestion = splitShopSuggestion;
+            ItemComparisons = itemComparisons ?? new();
+            CheapestWeighted = cheapestWeighted ?? new CategoryRecommendation();
+            CheapestUnweighted = cheapestUnweighted ?? new CategoryRecommendation();
+            NearestStore = nearestStore ?? new CategoryRecommendation();
         }
     }
 }
