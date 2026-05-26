@@ -1,37 +1,22 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import './DashboardPage.css';
 import { API_URL } from '../App';
 import { 
-  Plus, 
-  Trash2, 
-  ScanLine, 
-  RefreshCw, 
   TrendingUp, 
   Settings, 
   ShoppingBag, 
-  Bell, 
-  LogOut, 
-  User as UserIcon,
-  HelpCircle,
   CheckCircle,
-  AlertTriangle,
-  Sparkles,
-  Navigation,
-  Check,
-  Fuel,
-  CreditCard,
-  MapPin,
-  Trophy,
-  Star,
-  Receipt
+  GitCompare
 } from 'lucide-react';
 
-import Logo from '../components/Logo';
+import Header from '../components/Header';
+import OptimizeBasketTab from '../components/OptimizeBasketTab';
+import SavingsHistoryTab from '../components/SavingsHistoryTab';
+import MySettingsTab from '../components/MySettingsTab';
+import ComparisonTab from '../components/ComparisonTab';
 
 function DashboardPage({ user, onLogout }) {
-  const [activeTab, setActiveTab] = useState('compare'); // 'compare' | 'analytics' | 'settings'
-  const [searchQuery, setSearchQuery] = useState('');
-  const [autocompleteResults, setAutocompleteResults] = useState([]);
+  const [activeTab, setActiveTab] = useState('compare'); // 'compare' | 'analytics' | 'settings' | 'recommendations'
   const [shoppingList, setShoppingList] = useState([]);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   
@@ -75,25 +60,8 @@ function DashboardPage({ user, onLogout }) {
   const [loading, setLoading] = useState(false);
   const [ocrLoading, setOcrLoading] = useState(false);
   const [toast, setToast] = useState(null);
-  const fileInputRef = useRef(null);
 
-  // Local mock catalog for offline fallback autocomplete
-  const localCatalog = [
-    { Name: 'Penne Pasta', Category: 'Pasta', PackageSize: '500g' },
-    { Name: 'De Cecco Spaghetti', Category: 'Pasta', PackageSize: '500g' },
-    { Name: 'Fresh Full Cream Milk', Category: 'Milk', PackageSize: '2L' },
-    { Name: 'Devondale UHT Full Cream Milk', Category: 'Milk', PackageSize: '1L' },
-    { Name: 'Cadbury Dairy Milk Chocolate Block', Category: 'Chocolate', PackageSize: '180g' },
-    { Name: 'Heinz Baked Beans', Category: 'Beans', PackageSize: '220g' },
-    { Name: 'Morning Fresh Dishwashing Liquid', Category: 'Dishwashing', PackageSize: '900ml' },
-    { Name: 'Bulla Cream Classic Vanilla Ice Cream', Category: 'Ice Cream', PackageSize: '2L' },
-    { Name: 'White Toast Bread', Category: 'Bread', PackageSize: '650g' },
-    { Name: 'Helga\'s Traditional Wholemeal Bread', Category: 'Bread', PackageSize: '750g' },
-    { Name: 'Western Star Butter Block Salted', Category: 'Butter', PackageSize: '250g' },
-    { Name: 'Bega Tasty Cheese Block', Category: 'Cheese', PackageSize: '500g' },
-    { Name: 'Australian Red Gala Apples', Category: 'Produce', PackageSize: '1kg' },
-    { Name: 'Cavendish Bananas', Category: 'Produce', PackageSize: '1kg' }
-  ];
+
 
   const regionStoreData = {
     'Melbourne': {
@@ -326,31 +294,6 @@ function DashboardPage({ user, onLogout }) {
     }
   };
 
-  // 2. Autocomplete Search Handler
-  const handleSearchChange = async (e) => {
-    const val = e.target.value;
-    setSearchQuery(val);
-    if (!val.trim()) {
-      setAutocompleteResults([]);
-      return;
-    }
-
-    try {
-      const response = await fetch(`${API_URL}/catalog/search?q=${encodeURIComponent(val)}`);
-      if (!response.ok) throw new Error();
-      const data = await response.json();
-      setAutocompleteResults(data);
-    } catch {
-      // Local fallback matching
-      const filtered = localCatalog.filter(item => 
-        item.Name.toLowerCase().includes(val.toLowerCase()) || 
-        item.Category.toLowerCase().includes(val.toLowerCase())
-      ).slice(0, 5);
-      
-      setAutocompleteResults(filtered.map(f => ({ name: f.Name, category: f.Category, packageSize: f.PackageSize })));
-    }
-  };
-
   // 3. Add Item to List
   const handleAddItem = async (itemName, packageSize = "") => {
     const newItemPayload = {
@@ -381,8 +324,6 @@ function DashboardPage({ user, onLogout }) {
       setShoppingList([...shoppingList, localNew]);
       showToast(`Added ${itemName} (offline)`);
     }
-    setSearchQuery('');
-    setAutocompleteResults([]);
   };
 
   // 4. Delete Item
@@ -436,62 +377,7 @@ function DashboardPage({ user, onLogout }) {
     }
   };
 
-  const renderCategoryCard = (rec, title, emoji, themeColor) => {
-    if (!rec || !rec.storeName) return null;
-    return (
-      <div className="category-rec-card glass-panel animate-slide-up" style={{ borderLeft: `4px solid ${themeColor}`, padding: '12px', background: 'rgba(255, 255, 255, 0.02)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '1rem' }}>{emoji}</span>
-              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{title}</span>
-            </div>
-            <h4 style={{ margin: '4px 0 0 0', fontSize: '0.95rem', fontWeight: 800, color: 'var(--primary)' }}>
-              {getStoreDisplayName(rec.storeName)}
-            </h4>
-          </div>
-          <span className="savings-chip" style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--blue-500)', fontSize: '0.75rem', padding: '3px 6px', borderRadius: '4px', fontWeight: 700, whiteSpace: 'nowrap' }}>
-            {rec.metricValue}
-          </span>
-        </div>
-        
-        <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-charcoal)', lineHeight: '1.4' }}>
-          {rec.explanation}
-        </p>
-        
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <MapPin size={10} style={{ color: 'var(--blue-500)', flexShrink: 0 }} />
-            <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{getStoreAddress(rec.storeName)}</span>
-          </div>
-        </div>
 
-        {rec.winningProducts && rec.winningProducts.length > 0 && (
-          <div>
-            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Cheapest Items:</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-              {rec.winningProducts.slice(0, 3).map(p => (
-                <span key={p} className="product-win-tag" style={{ fontSize: '0.65rem', padding: '1px 4px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', border: '1px solid var(--border-glass)' }}>{p}</span>
-              ))}
-              {rec.winningProducts.length > 3 && (
-                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>+{rec.winningProducts.length - 3} more</span>
-              )}
-            </div>
-          </div>
-        )}
-
-        <a 
-          className="btn btn-secondary" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(preferences.homeAddress || 'Richmond VIC')}&destination=${encodeURIComponent(getStoreDisplayName(rec.storeName) + ', ' + getStoreAddress(rec.storeName))}`}
-          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '5px 0', fontSize: '0.75rem', textDecoration: 'none', marginTop: '4px' }}
-        >
-          <Navigation size={10} /> View in Google Maps
-        </a>
-      </div>
-    );
-  };
 
   // 7. Sync Loyalty purchase history
   const handleSyncLoyalty = async () => {
@@ -864,60 +750,16 @@ function DashboardPage({ user, onLogout }) {
       )}
 
       {/* Header */}
-      <header className="dash-header">
-        <div className="dash-logo" onClick={() => setActiveTab('compare')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Logo size={28} />
-          <span>Docket</span>
-        </div>
-        
-        <div className="dash-user-section">
-          {/* Notifications Bell */}
-          <div style={{ position: 'relative' }}>
-            <Bell 
-              className="notifications-bell" 
-              size={20} 
-              onClick={() => {
-                setShowNotifications(!showNotifications);
-                if (!showNotifications) handleMarkNotificationsRead();
-              }}
-            />
-            {unreadCount > 0 && <span className="bell-badge"></span>}
-            
-            {showNotifications && (
-              <div className="glass-panel notification-drawer animate-fade-in">
-                <div className="drawer-header">
-                  <h4 style={{ fontSize: '0.95rem' }}>Weekly Notifications</h4>
-                  <span 
-                    style={{ fontSize: '0.75rem', color: 'var(--primary)', cursor: 'pointer' }}
-                    onClick={() => setShowNotifications(false)}
-                  >
-                    Close
-                  </span>
-                </div>
-                <div className="drawer-items">
-                  {notifications.map(n => (
-                    <div key={n.id} className={`notif-item ${n.read ? '' : 'unread'}`}>
-                      <span className="notif-title">{n.title}</span>
-                      <span className="notif-msg">{n.message}</span>
-                      <span className="notif-time">{n.timestamp}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* User badge */}
-          <div className="user-profile-badge">
-            <UserIcon size={16} />
-            <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{user.username}</span>
-          </div>
-
-          <button className="btn btn-secondary" onClick={onLogout} style={{ padding: '8px 14px', fontSize: '0.85rem' }}>
-            <LogOut size={14} /> Logout
-          </button>
-        </div>
-      </header>
+      <Header
+        user={user}
+        onLogout={onLogout}
+        setActiveTab={setActiveTab}
+        showNotifications={showNotifications}
+        setShowNotifications={setShowNotifications}
+        unreadCount={unreadCount}
+        notifications={notifications}
+        handleMarkNotificationsRead={handleMarkNotificationsRead}
+      />
 
       <div className="container dash-main">
         {/* Navigation Tabs */}
@@ -935,798 +777,66 @@ function DashboardPage({ user, onLogout }) {
             <TrendingUp size={18} /> Savings History
           </button>
           <button 
+            className={`tab-btn ${activeTab === 'recommendations' ? 'active' : ''}`}
+            onClick={() => setActiveTab('recommendations')}
+          >
+            <GitCompare size={18} /> Comparison
+          </button>
+          <button 
             className={`tab-btn ${activeTab === 'settings' ? 'active' : ''}`}
             onClick={() => setActiveTab('settings')}
           >
             <Settings size={18} /> My Settings
           </button>
-          <button 
-            className={`tab-btn ${activeTab === 'recommendations' ? 'active' : ''}`}
-            onClick={() => setActiveTab('recommendations')}
-          >
-            <Trophy size={18} /> Recommendations
-          </button>
         </nav>
 
-        {/* Tab content */}
+        {/* Tab contents */}
         {activeTab === 'compare' && (
-          <div className="view-section compare-grid">
-            {/* LEFT COLUMN: List Builder Wrapper */}
-            <div className="left-column-wrapper animate-slide-up" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div className="glass-panel builder-card" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                <h3 style={{ fontSize: '1.1rem', borderBottom: '1px solid var(--border-glass)', paddingBottom: '10px' }}>
-                  Build Shopping List
-                </h3>
-                
-                {/* Autocomplete Input */}
-                <div className="search-box-wrapper">
-                  <input 
-                    type="text" 
-                    className="glass-input" 
-                    placeholder="Search grocery item (e.g. Milk, Pasta)"
-                    value={searchQuery}
-                    onChange={handleSearchChange}
-                    style={{ width: '100%', paddingRight: '40px' }}
-                  />
-                  <Plus size={18} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-
-                  {autocompleteResults.length > 0 && (
-                    <div className="autocomplete-dropdown">
-                      {autocompleteResults.map((item, idx) => (
-                        <div 
-                          key={idx} 
-                          className="autocomplete-item"
-                          onClick={() => handleAddItem(item.name, item.packageSize)}
-                        >
-                          <span className="autocomplete-item-name">{item.name}</span>
-                          {item.packageSize && <span className="autocomplete-item-size">{item.packageSize}</span>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Shopping List Items */}
-                <div className="shopping-list">
-                  {shoppingList.length > 0 ? (
-                    shoppingList.map((item) => (
-                      <div key={item.id} className="list-item">
-                        <div className="list-item-left">
-                          <span className="list-item-name">{item.itemName}</span>
-                          {item.packageSize && <span className="list-item-size">({item.packageSize})</span>}
-                        </div>
-                        
-                        <div className="list-item-right">
-                          <div className="qty-controls">
-                            <button className="qty-btn" onClick={() => handleUpdateQty(item.id, item.quantity - 1)}>-</button>
-                            <span className="qty-value">{item.quantity}</span>
-                            <button className="qty-btn" onClick={() => handleUpdateQty(item.id, item.quantity + 1)}>+</button>
-                          </div>
-                          <Trash2 className="delete-btn" size={16} onClick={() => handleDeleteItem(item.id)} />
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div style={{ padding: '30px 10px', textAlignment: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center', border: '1px dashed var(--border-glass)', borderRadius: '10px' }}>
-                      Your list is currently empty.
-                    </div>
-                  )}
-                </div>
-
-                {shoppingList.length > 0 && (
-                  <button className="btn btn-secondary" onClick={handleClearList} style={{ width: '100%', fontSize: '0.85rem' }}>
-                    Clear Active List
-                  </button>
-                )}
-
-                {/* OCR Image Upload Dropzone */}
-                <div className="ocr-dropzone">
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    onChange={handleFileChange} 
-                    accept="image/*" 
-                    multiple
-                    style={{ display: 'none' }} 
-                  />
-                  
-                  {ocrLoading ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                      <RefreshCw size={24} className="animate-spin" style={{ animation: 'spin 1.5s linear infinite' }} />
-                      <span style={{ fontSize: '0.85rem', color: 'var(--primary)' }}>AI OCR Scanning Receipts...</span>
-                    </div>
-                  ) : (
-                    <>
-                      <div onClick={() => fileInputRef.current && fileInputRef.current.click()} style={{ width: '100%', cursor: 'pointer' }}>
-                        <ScanLine size={24} style={{ color: 'var(--primary)', marginBottom: '4px' }} />
-                        <div style={{ fontSize: '0.88rem', fontWeight: 600 }}>+ Upload Receipts</div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Select multiple receipt images or documents</div>
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* Scan Actions & Queue */}
-                <div className="scan-actions-container" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {uploadedFiles.length > 0 && !ocrLoading && (
-                    <div className="uploaded-files-queue glass-panel animate-slide-up" style={{ padding: '12px' }}>
-                      <div style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--primary)', marginBottom: '8px' }}>
-                        Scan Queue ({uploadedFiles.length} file{uploadedFiles.length > 1 ? 's' : ''})
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '120px', overflowY: 'auto' }}>
-                        {uploadedFiles.map((file, idx) => (
-                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', background: 'rgba(255,255,255,0.03)', padding: '6px 8px', borderRadius: '4px' }}>
-                            <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '80%' }}>{file.name}</span>
-                            <Trash2 
-                              size={14} 
-                              style={{ color: 'var(--danger)', cursor: 'pointer' }} 
-                              onClick={() => handleRemoveFile(idx)} 
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <button 
-                    className="btn btn-primary" 
-                    onClick={handleScanDocuments} 
-                    disabled={ocrLoading || uploadedFiles.length === 0}
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: 700 }}
-                  >
-                    <RefreshCw size={14} className={ocrLoading ? "animate-spin" : ""} /> 
-                    {ocrLoading ? "Scanning..." : "Scan Documents"}
-                  </button>
-                </div>
-
-                {/* Loyalty card purchase history import */}
-                <div className="loyalty-sync-box">
-                  <span className="loyalty-title">Sync Loyalty Purchase History</span>
-                  <div className="loyalty-buttons">
-                    <button className="btn btn-secondary" onClick={handleSyncLoyalty} style={{ flex: 1, padding: '8px 10px', fontSize: '0.8rem' }}>
-                      <CreditCard size={14} /> Flybuys Sync
-                    </button>
-                    <button className="btn btn-secondary" onClick={handleSyncLoyalty} style={{ flex: 1, padding: '8px 10px', fontSize: '0.8rem' }}>
-                      <CreditCard size={14} /> Rewards Sync
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Recommendations Box */}
-              {scannedReceipts.length > 0 && storeRecommendations && (
-                <div className="glass-panel recommendations-box animate-slide-up" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--border-glass)', paddingBottom: '10px' }}>
-                    <Trophy size={18} style={{ color: 'var(--blue-600)' }} />
-                    <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--primary)' }}>Recommendations</h3>
-                  </div>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    {renderCategoryCard(storeRecommendations.cheapestWeighted, "Cheapest Shop (Recurring)", "🏆", "var(--success)")}
-                    {renderCategoryCard(storeRecommendations.cheapestUnweighted, "Cheapest Overall (Average)", "💰", "var(--blue-500)")}
-                    {renderCategoryCard(storeRecommendations.nearestStore, "Nearest Shop", "📍", "var(--purple-500)")}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* RIGHT COLUMN: Comparison Engine Panel */}
-            <div className="comparison-panel animate-slide-up">
-              {shoppingList.length > 0 && comparison ? (
-                <>
-                  {/* Hero Savings Recommendation Banner */}
-                  <div className="glass-panel recommendation-banner">
-                    <div>
-                      <span className="rec-badge">Recommended Shop</span>
-                      <h2 className="rec-title">
-                        Shop <span className="rec-savings">{getStoreDisplayName(comparison.winnerStore)}</span> this week
-                      </h2>
-                      <p className="rec-split-highlight">
-                        You'll save <strong style={{ color: 'var(--success)' }}>${comparison.singleStoreSavings.toFixed(2)}</strong> this week by shopping here.
-                      </p>
-                    </div>
-                    <button className="btn btn-primary" onClick={handleCheckout} disabled={loading} style={{ padding: '14px 24px' }}>
-                      Checkout & Log Savings
-                    </button>
-                  </div>
-
-                  {/* Store cards grid */}
-                  <div className="store-options-grid">
-                    {/* Coles option */}
-                    <div className={`store-option-card ${comparison.winnerStore === 'Coles' ? 'winner' : ''}`}>
-                      <div className="store-option-header">
-                        <span className="store-option-name" style={{ color: 'var(--primary)' }}>{getStoreDisplayName('Coles')}</span>
-                        {comparison.winnerStore === 'Coles' && <span className="badge badge-success">Cheapest</span>}
-                      </div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
-                        <MapPin size={10} /> {getStoreAddress('Coles')}
-                      </div>
-                      <div className="store-option-total">${comparison.coles.adjustedTotal.toFixed(2)}</div>
-                      <div className="store-option-breakdown">
-                        <div className="breakdown-row">
-                          <span>Shelf Items Total</span>
-                          <span>${comparison.coles.shelfTotal.toFixed(2)}</span>
-                        </div>
-                        <div className="breakdown-row">
-                          <span>Travel/Fuel cost</span>
-                          <span>+${comparison.coles.fuelAdjustment.toFixed(2)}</span>
-                        </div>
-                        <div className="breakdown-row">
-                          <span>Flybuys points value</span>
-                          <span style={{ color: 'var(--success)' }}>-${comparison.coles.rewardsValue.toFixed(2)}</span>
-                        </div>
-                        <div className="breakdown-row" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '6px', marginTop: '4px' }}>
-                          <span>Out-of-stock risk</span>
-                          <span className={comparison.coles.stockRiskPercentage > 10 ? 'stock-risk-indicator' : ''}>
-                            {comparison.coles.stockRiskPercentage > 10 && <AlertTriangle size={10} />}
-                            {comparison.coles.stockRiskPercentage}%
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Woolworths option */}
-                    <div className={`store-option-card ${comparison.winnerStore === 'Woolworths' ? 'winner' : ''}`}>
-                      <div className="store-option-header">
-                        <span className="store-option-name" style={{ color: 'var(--primary)' }}>{getStoreDisplayName('Woolworths')}</span>
-                        {comparison.winnerStore === 'Woolworths' && <span className="badge badge-success">Cheapest</span>}
-                      </div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
-                        <MapPin size={10} /> {getStoreAddress('Woolworths')}
-                      </div>
-                      <div className="store-option-total">${comparison.woolworths.adjustedTotal.toFixed(2)}</div>
-                      <div className="store-option-breakdown">
-                        <div className="breakdown-row">
-                          <span>Shelf Items Total</span>
-                          <span>${comparison.woolworths.shelfTotal.toFixed(2)}</span>
-                        </div>
-                        <div className="breakdown-row">
-                          <span>Travel/Fuel cost</span>
-                          <span>+${comparison.woolworths.fuelAdjustment.toFixed(2)}</span>
-                        </div>
-                        <div className="breakdown-row">
-                          <span>Rewards points value</span>
-                          <span style={{ color: 'var(--success)' }}>-${comparison.woolworths.rewardsValue.toFixed(2)}</span>
-                        </div>
-                        <div className="breakdown-row" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '6px', marginTop: '4px' }}>
-                          <span>Out-of-stock risk</span>
-                          <span className={comparison.woolworths.stockRiskPercentage > 10 ? 'stock-risk-indicator' : ''}>
-                            {comparison.woolworths.stockRiskPercentage > 10 && <AlertTriangle size={10} />}
-                            {comparison.woolworths.stockRiskPercentage}%
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Item-by-item comparison table */}
-                  <div className="glass-panel breakdown-card">
-                    <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>Itemized Comparison Details</h3>
-                    <div className="breakdown-table-wrapper">
-                      <table className="breakdown-table">
-                        <thead>
-                          <tr>
-                            <th>Item Name</th>
-                            <th>{getStoreDisplayName('Coles')}</th>
-                            <th>{getStoreDisplayName('Woolworths')}</th>
-                            <th>Stock Reliability</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {shoppingList.map((item, idx) => {
-                            const cItem = comparison.coles.basketItems[idx];
-                            const wItem = comparison.woolworths.basketItems[idx];
-                            if (!cItem || !wItem) return null;
-
-                            const cMatched = cItem.matchedItem || cItem.MatchedItem || {};
-                            const wMatched = wItem.matchedItem || wItem.MatchedItem || {};
-
-                            const colesPrice = cMatched.shelfPrice || 0;
-                            const wooliesPrice = wMatched.shelfPrice || 0;
-                            
-                            const colesCheaper = colesPrice <= wooliesPrice;
-                            const wooliesCheaper = wooliesPrice < colesPrice;
-
-                            const cIsSpecial = cItem.isSpecial || cItem.IsSpecial;
-                            const wIsSpecial = wItem.isSpecial || wItem.IsSpecial;
-
-                            const cStockRisk = cMatched.outOfStockProbability || 0;
-                            const wStockRisk = wMatched.outOfStockProbability || 0;
-
-                            return (
-                              <tr key={idx}>
-                                <td>
-                                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                    <span style={{ fontWeight: 600 }}>{item.itemName}</span>
-                                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                                      Qty: {item.quantity} | {cMatched.packageSize || 'ea'}
-                                    </span>
-                                  </div>
-                                </td>
-                                <td>
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                    <span className={colesCheaper ? 'best-price-highlight' : ''}>
-                                      ${(colesPrice * item.quantity).toFixed(2)}
-                                    </span>
-                                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                                      (${colesPrice.toFixed(2)} ea)
-                                    </span>
-                                    {cIsSpecial && <span className="badge badge-special" style={{ fontSize: '0.6rem', padding: '2px 4px', width: 'fit-content' }}>Special</span>}
-                                  </div>
-                                </td>
-                                <td>
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                    <span className={wooliesCheaper ? 'best-price-highlight' : ''}>
-                                      ${(wooliesPrice * item.quantity).toFixed(2)}
-                                    </span>
-                                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                                      (${wooliesPrice.toFixed(2)} ea)
-                                    </span>
-                                    {wIsSpecial && <span className="badge badge-special" style={{ fontSize: '0.6rem', padding: '2px 4px', width: 'fit-content' }}>Special</span>}
-                                  </div>
-                                </td>
-                                <td>
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                    <div style={{ fontSize: '0.8rem' }}>
-                                      C: {Math.round((1 - cStockRisk) * 100)}% | W: {Math.round((1 - wStockRisk) * 100)}%
-                                    </div>
-                                    {((cIsSpecial && cStockRisk > 0.1) || (wIsSpecial && wStockRisk > 0.1)) && (
-                                      <span className="stock-risk-indicator" style={{ fontSize: '0.68rem' }}>
-                                        <AlertTriangle size={10} /> Special stock risk
-                                      </span>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  {/* Scanned Receipts Summary */}
-                  {scannedReceipts.length > 0 && (
-                    <div className="glass-panel breakdown-card" style={{ marginTop: '24px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                        <Receipt size={18} style={{ color: 'var(--blue-600)' }} />
-                        <h3 style={{ margin: 0, fontSize: '1rem' }}>Scanned Receipts</h3>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {scannedReceipts.map((receipt) => (
-                          <div key={receipt.id} className="glass-panel" style={{ padding: '12px', border: '1px solid var(--border-glass)' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <MapPin size={14} style={{ color: 'var(--blue-500)' }} />
-                                <span style={{ fontWeight: 700, color: 'var(--primary)' }}>{receipt.storeDisplayName}</span>
-                              </div>
-                              <span style={{ fontWeight: 700, fontSize: '1rem' }}>${(receipt.receiptTotal || 0).toFixed(2)}</span>
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              {receipt.items.map((item, i) => (
-                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: 'var(--text-muted)', padding: '2px 0' }}>
-                                  <span>{item.itemName} {item.quantity > 1 ? `x${item.quantity}` : ''}</span>
-                                  <span>${(item.totalPrice || 0).toFixed(2)}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="glass-panel" style={{ padding: '60px', textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', gap: '16px' }}>
-                  <ShoppingBag size={48} style={{ color: 'var(--text-muted)' }} />
-                  <div>
-                    <h3 style={{ color: '#fff', fontSize: '1.2rem', marginBottom: '4px' }}>Awaiting shopping list...</h3>
-                    <p style={{ fontSize: '0.9rem' }}>Add some grocery items to start running comparison optimizations</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+          <OptimizeBasketTab
+            shoppingList={shoppingList}
+            comparison={comparison}
+            uploadedFiles={uploadedFiles}
+            ocrLoading={ocrLoading}
+            loading={loading}
+            scannedReceipts={scannedReceipts}
+            storeRecommendations={storeRecommendations}
+            preferences={preferences}
+            handleAddItem={handleAddItem}
+            handleUpdateQty={handleUpdateQty}
+            handleDeleteItem={handleDeleteItem}
+            handleClearList={handleClearList}
+            handleFileChange={handleFileChange}
+            handleRemoveFile={handleRemoveFile}
+            handleScanDocuments={handleScanDocuments}
+            handleSyncLoyalty={handleSyncLoyalty}
+            handleCheckout={handleCheckout}
+            getStoreDisplayName={getStoreDisplayName}
+            getStoreAddress={getStoreAddress}
+          />
         )}
 
-        {/* Tab content: Savings Analytics */}
         {activeTab === 'analytics' && (
-          <div className="view-section animate-fade-in">
-            {/* Metric widgets */}
-            <div className="analytics-grid">
-              <div className="glass-panel analytic-metric-card">
-                <span className="metric-label">Cumulative Savings</span>
-                <span className="metric-value" style={{ color: 'var(--success)' }}>
-                  ${savingsStats.cumulativeSavings.toFixed(2)}
-                </span>
-              </div>
-              <div className="glass-panel analytic-metric-card">
-                <span className="metric-label">Total spent</span>
-                <span className="metric-value">${savingsStats.totalSpent.toFixed(2)}</span>
-              </div>
-              <div className="glass-panel analytic-metric-card">
-                <span className="metric-label">Average savings</span>
-                <span className="metric-value">${savingsStats.averageSavings.toFixed(2)}</span>
-              </div>
-              <div className="glass-panel analytic-metric-card">
-                <span className="metric-label">Grocery trips</span>
-                <span className="metric-value">{savingsStats.totalShops}</span>
-              </div>
-            </div>
-
-            {/* Savings SVG Line Chart */}
-            {savingsStats.history.length > 0 && (
-              <div className="glass-panel chart-card">
-                <div className="chart-header">
-                  <div>
-                    <h3 style={{ fontSize: '1.1rem' }}>Savings Progression</h3>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Log of money saved over successive shops</p>
-                  </div>
-                  <span className="badge badge-success">Flybuys & Rewards Optimized</span>
-                </div>
-                {renderSavingsChart()}
-              </div>
-            )}
-
-            {/* Savings History Logs Table */}
-            <div className="glass-panel breakdown-card">
-              <h3 style={{ fontSize: '1.1rem', marginBottom: '16px' }}>Historical Savings Log</h3>
-              <div className="breakdown-table-wrapper">
-                <table className="breakdown-table">
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Store Visited</th>
-                      <th>Total Spent</th>
-                      <th>Money Saved</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {savingsStats.history.slice().reverse().map((log, idx) => (
-                      <tr key={idx}>
-                        <td style={{ fontWeight: 600 }}>{log.Date}</td>
-                        <td>
-                          <span className={`badge ${log.Store === 'Coles' ? 'badge-special' : (log.Store === 'Woolworths' ? 'badge-success' : 'badge-warning')}`} style={{ fontSize: '0.7rem' }}>
-                            {log.Store}
-                          </span>
-                        </td>
-                        <td>${log.TotalSpent.toFixed(2)}</td>
-                        <td className="best-price-highlight">+${log.AmountSaved.toFixed(2)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+          <SavingsHistoryTab savingsStats={savingsStats} />
         )}
 
-        {/* Tab content: User preferences settings */}
-        {activeTab === 'settings' && (
-          <div className="view-section animate-fade-in">
-            <div className="glass-panel" style={{ padding: '32px' }}>
-              <h3 style={{ fontSize: '1.2rem', marginBottom: '24px', borderBottom: '1px solid var(--border-glass)', paddingBottom: '10px' }}>
-                Grocery Optimization Settings
-              </h3>
-              
-              <form className="settings-form" onSubmit={handleSavePreferences}>
-
-                {/* City / Region */}
-                <div className="slider-group" style={{ marginBottom: '24px' }}>
-                  <div className="slider-labels" style={{ marginBottom: '8px' }}>
-                    <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <MapPin size={14} style={{ color: 'var(--blue-600)' }} /> Your City / Region
-                    </label>
-                  </div>
-                  <select
-                    className="glass-input"
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border-glass)', background: 'rgba(255,255,255,0.05)', color: 'var(--primary)', cursor: 'pointer' }}
-                    value={preferences.region || 'Melbourne'}
-                    onChange={(e) => setPreferences({ ...preferences, region: e.target.value })}
-                  >
-                    <option value="Melbourne">Melbourne, VIC</option>
-                    <option value="Sydney">Sydney, NSW</option>
-                    <option value="Brisbane">Brisbane, QLD</option>
-                    <option value="Perth">Perth, WA</option>
-                    <option value="Adelaide">Adelaide, SA</option>
-                    <option value="Gold Coast">Gold Coast, QLD</option>
-                    <option value="Canberra">Canberra, ACT</option>
-                    <option value="Hobart">Hobart, TAS</option>
-                    <option value="Darwin">Darwin, NT</option>
-                  </select>
-                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                    Only stores with branches in your city will appear in recommendations
-                  </span>
-                </div>
-                
-                {/* Home Address */}
-                <div className="slider-group" style={{ marginBottom: '24px' }}>
-                  <div className="slider-labels" style={{ marginBottom: '8px' }}>
-                    <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <MapPin size={14} style={{ color: 'var(--blue-600)' }} /> Home Address (for Google Maps directions)
-                    </label>
-                  </div>
-                  <input 
-                    type="text" 
-                    className="glass-input"
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border-glass)', background: 'rgba(255,255,255,0.05)', color: 'var(--primary)' }}
-                    placeholder="Enter suburb or address (e.g. Richmond VIC)"
-                    value={preferences.homeAddress || ''}
-                    onChange={(e) => setPreferences({ ...preferences, homeAddress: e.target.value })}
-                  />
-                </div>
-
-                {/* Distance Coles */}
-                <div className="slider-group">
-                  <div className="slider-labels">
-                    <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Navigation size={14} /> Distance to Coles
-                    </label>
-                    <span style={{ fontWeight: 700 }}>{preferences.distanceToColesKm} km</span>
-                  </div>
-                  <input 
-                    type="range" 
-                    min="0.1" 
-                    max="15" 
-                    step="0.1"
-                    className="pref-slider"
-                    value={preferences.distanceToColesKm}
-                    onChange={(e) => setPreferences({ ...preferences, distanceToColesKm: parseFloat(e.target.value) })}
-                  />
-                </div>
-
-                {/* Distance Woolworths */}
-                <div className="slider-group">
-                  <div className="slider-labels">
-                    <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Navigation size={14} /> Distance to Woolworths
-                    </label>
-                    <span style={{ fontWeight: 700 }}>{preferences.distanceToWoolworthsKm} km</span>
-                  </div>
-                  <input 
-                    type="range" 
-                    min="0.1" 
-                    max="15" 
-                    step="0.1"
-                    className="pref-slider"
-                    value={preferences.distanceToWoolworthsKm}
-                    onChange={(e) => setPreferences({ ...preferences, distanceToWoolworthsKm: parseFloat(e.target.value) })}
-                  />
-                </div>
-
-                {/* Fuel Cost per km */}
-                <div className="slider-group">
-                  <div className="slider-labels">
-                    <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Fuel size={14} /> Fuel / Transit Cost per km
-                    </label>
-                    <span style={{ fontWeight: 700 }}>${preferences.fuelCostPerKm.toFixed(2)} / km</span>
-                  </div>
-                  <input 
-                    type="range" 
-                    min="0.05" 
-                    max="0.50" 
-                    step="0.01"
-                    className="pref-slider"
-                    value={preferences.fuelCostPerKm}
-                    onChange={(e) => setPreferences({ ...preferences, fuelCostPerKm: parseFloat(e.target.value) })}
-                  />
-                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                    Calculates travel overhead: 2x distance x fuel rate per store trip
-                  </span>
-                </div>
-
-                {/* Loyalty memberships toggles */}
-                <div className="form-group" style={{ gap: '10px' }}>
-                  <label className="form-label">Loyalty Memberships</label>
-                  <div className="checkbox-group">
-                    <label className="checkbox-label">
-                      <input 
-                        type="checkbox" 
-                        checked={preferences.hasFlybuys} 
-                        onChange={(e) => setPreferences({ ...preferences, hasFlybuys: e.target.checked })}
-                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                      />
-                      <span>I have a Coles Flybuys Card (0.5% point rebate + bonus points)</span>
-                    </label>
-                  </div>
-                  <div className="checkbox-group" style={{ marginTop: '4px' }}>
-                    <label className="checkbox-label">
-                      <input 
-                        type="checkbox" 
-                        checked={preferences.hasEverydayRewards} 
-                        onChange={(e) => setPreferences({ ...preferences, hasEverydayRewards: e.target.checked })}
-                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                      />
-                      <span>I have an Everyday Rewards Card (0.5% point rebate + bonus points)</span>
-                    </label>
-                  </div>
-                </div>
-
-                <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: 'fit-content', padding: '12px 28px', marginTop: '8px' }}>
-                  {loading ? 'Saving Settings...' : 'Save Settings'}
-                </button>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* ── Recommendations Tab ───────────────────────────────────────────── */}
         {activeTab === 'recommendations' && (
-          <div className="view-section animate-fade-in">
-            {recommendationsLoading ? (
-              <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>
-                <RefreshCw size={32} style={{ animation: 'spin 1s linear infinite' }} />
-                <p style={{ marginTop: '12px' }}>Running store analysis…</p>
-              </div>
-            ) : storeRecommendations ? (
-              <div className="recommendations-tab">
+          <ComparisonTab
+            recommendationsLoading={recommendationsLoading}
+            storeRecommendations={storeRecommendations}
+            loadStoreRecommendations={loadStoreRecommendations}
+            getStoreDisplayName={getStoreDisplayName}
+            getStoreAddress={getStoreAddress}
+            preferences={preferences}
+          />
+        )}
 
-                {/* Trade-Off Banner */}
-                {storeRecommendations.tradeOffNarrative && (
-                  <div className="tradeoff-banner glass-panel animate-slide-up">
-                    <Sparkles size={20} style={{ color: 'var(--blue-600)', flexShrink: 0 }} />
-                    <div>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--blue-700)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Smart Trade-Off Analysis</div>
-                      <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-charcoal)' }}>{storeRecommendations.tradeOffNarrative}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Recommended Shops */}
-                <div style={{ marginBottom: '24px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                    <Trophy size={20} style={{ color: 'var(--blue-600)' }} />
-                    <h3 style={{ margin: 0 }}>Recommended Shops</h3>
-                  </div>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
-                    Personalized store recommendations categorized by recurring item savings, overall average cost, and proximity.
-                  </p>
-                  
-                  <div className="recommendations-categories-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
-                    {renderCategoryCard(storeRecommendations.cheapestWeighted, "Cheapest Shop (Recurring)", "🏆", "var(--success)")}
-                    {renderCategoryCard(storeRecommendations.cheapestUnweighted, "Cheapest Overall (Average)", "💰", "var(--blue-500)")}
-                    {renderCategoryCard(storeRecommendations.nearestStore, "Nearest Shop", "📍", "var(--purple-500)")}
-                  </div>
-                </div>
-
-                {/* Itemized Price Comparison Table for Recommended Shops */}
-                {storeRecommendations.itemComparisons && storeRecommendations.itemComparisons.length > 0 ? (
-                  <div className="glass-panel breakdown-card">
-                    <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>Itemized Comparison — Recommended Shops</h3>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
-                      Price comparison for your most-purchased items across all recommended stores. Cheapest price per item is highlighted.
-                    </p>
-                    <div className="breakdown-table-wrapper">
-                      <table className="breakdown-table">
-                        <thead>
-                          <tr>
-                            <th>Item</th>
-                            {storeRecommendations.topByWeightedSavings.map(s => (
-                              <th key={s.storeName}>{getStoreDisplayName(s.storeName)}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {storeRecommendations.itemComparisons.map((item, idx) => {
-                            const cheapest = item.cheapestStore;
-                            return (
-                              <tr key={idx}>
-                                <td>
-                                  <span style={{ fontWeight: 600 }}>{item.productName}</span>
-                                </td>
-                                {storeRecommendations.topByWeightedSavings.map(s => {
-                                  const priceData = item.storePrices?.[s.storeName];
-                                  const isCheapest = s.storeName === cheapest;
-                                  return (
-                                    <td key={s.storeName}>
-                                      {priceData ? (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                          <span className={isCheapest ? 'best-price-highlight' : ''}>
-                                            ${priceData.price.toFixed(2)}
-                                          </span>
-                                          {priceData.packageSize && (
-                                            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
-                                              {priceData.packageSize}
-                                            </span>
-                                          )}
-                                          {priceData.isSpecial && (
-                                            <span className="badge badge-special" style={{ fontSize: '0.6rem', padding: '2px 4px', width: 'fit-content' }}>
-                                              {priceData.specialDetails || 'Special'}
-                                            </span>
-                                          )}
-                                        </div>
-                                      ) : (
-                                        <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>—</span>
-                                      )}
-                                    </td>
-                                  );
-                                })}
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="glass-panel breakdown-card">
-                    <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>Itemized Comparison — Recommended Shops</h3>
-                    <div className="breakdown-table-wrapper">
-                      <table className="breakdown-table">
-                        <thead>
-                          <tr>
-                            <th>Item</th>
-                            {storeRecommendations.topByWeightedSavings.map(s => (
-                              <th key={s.storeName}>{getStoreDisplayName(s.storeName)}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {storeRecommendations.productRankings.slice(0, 8).map((p, idx) => {
-                            const storeNames = storeRecommendations.topByWeightedSavings.map(s => s.storeName);
-                            return (
-                              <tr key={idx}>
-                                <td><span style={{ fontWeight: 600 }}>{p.productName}</span></td>
-                                {storeNames.map(sn => {
-                                  const isWinner = storeRecommendations.topByWeightedSavings
-                                    .find(s => s.storeName === sn)?.winningProducts
-                                    ?.some(wp => wp.toLowerCase().includes(p.productName.toLowerCase().split(' ')[0]));
-                                  return (
-                                    <td key={sn}>
-                                      <span className={isWinner ? 'best-price-highlight' : ''} style={{ fontSize: '0.82rem' }}>
-                                        {isWinner ? 'Best' : '—'}
-                                      </span>
-                                    </td>
-                                  );
-                                })}
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                {/* Product Rankings breakdown */}
-                <div className="glass-panel" style={{ marginTop: '24px', padding: '20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                    <Star size={18} style={{ color: 'var(--blue-600)' }} />
-                    <h3 style={{ margin: 0, fontSize: '1rem' }}>Your Product Purchase Rankings</h3>
-                  </div>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
-                    Based on your shopping history. Equal frequency = same rank. Rank 1 drives the recommendation most.
-                  </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {storeRecommendations.productRankings.slice(0, 8).map(p => (
-                      <div key={p.productName} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--blue-50)', borderRadius: '8px', border: '1px solid var(--divider)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span className={`rank-badge rank-badge--${Math.min(p.rank, 5)}`}>#{p.rank}</span>
-                          <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-charcoal)' }}>{p.productName}</span>
-                        </div>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{p.occurrences} purchase{p.occurrences !== 1 ? 's' : ''}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <button
-                    className="btn btn-secondary"
-                    style={{ marginTop: '16px', fontSize: '0.85rem', height: '36px', padding: '0 16px' }}
-                    onClick={loadStoreRecommendations}
-                    disabled={recommendationsLoading}
-                  >
-                    <RefreshCw size={14} /> Refresh Analysis
-                  </button>
-                </div>
-
-              </div>
-            ) : (
-              <div style={{ textAlign: 'center', padding: '80px', color: 'var(--text-muted)' }}>
-                <Trophy size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
-                <p>Upload receipts to generate your personalised store ranking.</p>
-              </div>
-            )}
-          </div>
+        {activeTab === 'settings' && (
+          <MySettingsTab
+            preferences={preferences}
+            setPreferences={setPreferences}
+            handleSavePreferences={handleSavePreferences}
+            loading={loading}
+          />
         )}
       </div>
     </div>

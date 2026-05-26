@@ -1,18 +1,18 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 
 :root {
-  /* Color Palette - Vibrant Shades of Blue */
-  --blue-950: #040d1e;           /* Deep space blue */
-  --blue-900: #0c2d5e;           /* Rich navy blue (Primary) */
-  --blue-800: #154284;           /* Deep royal blue */
-  --blue-700: #1a58af;           /* Vivid mid blue */
-  --blue-600: #1a7fdb;           /* Bright sky blue (Interactive) */
-  --blue-500: #429af2;           /* Bright electric blue */
-  --blue-400: #71b4f7;           /* Medium sky blue */
-  --blue-300: #a5d0fa;           /* Soft ice blue accent */
-  --blue-200: #cce4fc;           /* Clear ice blue */
-  --blue-100: #e8f2fc;           /* Ice blue surface tint */
-  --blue-50: #f4f8fd;            /* Light ice background base */
+  /* Color Palette - Unified Logo Hue (#59A5E8) */
+  --blue-950: #0b1a2d;           /* Deep brand navy */
+  --blue-900: #1b355a;           /* Brand dark (Primary text/headers) */
+  --blue-800: #244675;           /* Deep accent */
+  --blue-700: #355f96;           /* Mid-accent */
+  --blue-600: #59a5e8;           /* Exact Logo Blue (Interactive / Accent) */
+  --blue-500: #7ebbf0;           /* Soft brand blue */
+  --blue-400: #a2cff5;           /* Light brand accent */
+  --blue-300: #c1e0f9;           /* Very light accent */
+  --blue-200: #dcf0fc;           /* Border/divider tint */
+  --blue-100: #eff7fe;           /* Tinted surface background */
+  --blue-50: #f6fbff;            /* Extremely light background base */
   
   --primary: var(--blue-900);
   --interactive: var(--blue-600);
@@ -22,7 +22,7 @@
   --savings-green: #2d9b5a;
   --savings-bg-tint: #e8f7ee;
   
-  --bg-page: var(--blue-50);     /* Soft tinted background instead of light grey */
+  --bg-page: var(--blue-50);     /* Soft tinted background matching the logo background */
   --divider: #dbe4ef;            /* Slightly blue tinted divider */
   --text-charcoal: #1c2434;      /* Dark charcoal with slight blue tint */
   --text-muted: #5e6d87;         /* Supporting text with blue-grey tint */
