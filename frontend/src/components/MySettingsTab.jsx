@@ -253,26 +253,8 @@ export default function MySettingsTab({
             </span>
           </div>
 
-          {/* 3. Fuel Cost per km */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <div className="slider-labels" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Fuel size={14} style={{ color: 'var(--blue-500)' }} /> Fuel / Transit Cost per km
-              </label>
-              <span style={{ fontWeight: 700 }}>${preferences.fuelCostPerKm.toFixed(2)} / km</span>
-            </div>
-            <input 
-              type="range" 
-              min="0.05" 
-              max="0.50" 
-              step="0.01"
-              className="pref-slider"
-              value={preferences.fuelCostPerKm}
-              onChange={(e) => setPreferences({ ...preferences, fuelCostPerKm: parseFloat(e.target.value) })}
-            />
-          </div>
 
-          {/* 4. Loyalty card memberships */}
+          {/* 3. Loyalty card memberships */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <label className="form-label" style={{ fontSize: '0.88rem', fontWeight: 600 }}>Loyalty Memberships</label>
             <div className="checkbox-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

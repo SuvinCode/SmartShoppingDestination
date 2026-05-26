@@ -33,12 +33,68 @@ export default function OptimizeBasketTab({
   handleSyncLoyalty,
   handleCheckout,
   getStoreDisplayName,
-  getStoreAddress,
-  renderCategoryCard
+  getStoreAddress
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [autocompleteResults, setAutocompleteResults] = useState([]);
   const fileInputRef = useRef(null);
+
+  const renderCategoryCard = (rec, title, emoji, themeColor) => {
+    if (!rec || !rec.storeName) return null;
+    return (
+      <div className="category-rec-card glass-panel animate-slide-up" style={{ borderLeft: `4px solid ${themeColor}`, padding: '12px', background: 'rgba(255, 255, 255, 0.02)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '1rem' }}>{emoji}</span>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{title}</span>
+            </div>
+            <h4 style={{ margin: '4px 0 0 0', fontSize: '0.95rem', fontWeight: 800, color: 'var(--primary)' }}>
+              {getStoreDisplayName(rec.storeName)}
+            </h4>
+          </div>
+          <span className="savings-chip" style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--blue-500)', fontSize: '0.75rem', padding: '3px 6px', borderRadius: '4px', fontWeight: 700, whiteSpace: 'nowrap' }}>
+            {rec.metricValue}
+          </span>
+        </div>
+        
+        <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-charcoal)', lineHeight: '1.4' }}>
+          {rec.explanation}
+        </p>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <MapPin size={10} style={{ color: 'var(--blue-500)', flexShrink: 0 }} />
+            <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{getStoreAddress(rec.storeName)}</span>
+          </div>
+        </div>
+
+        {rec.winningProducts && rec.winningProducts.length > 0 && (
+          <div>
+            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Cheapest Items:</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+              {rec.winningProducts.slice(0, 3).map(p => (
+                <span key={p} className="product-win-tag" style={{ fontSize: '0.65rem', padding: '1px 4px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', border: '1px solid var(--border-glass)' }}>{p}</span>
+              ))}
+              {rec.winningProducts.length > 3 && (
+                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>+{rec.winningProducts.length - 3} more</span>
+              )}
+            </div>
+          </div>
+        )}
+
+        <a 
+          className="btn btn-secondary" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(preferences.homeAddress || 'Richmond VIC')}&destination=${encodeURIComponent(getStoreDisplayName(rec.storeName) + ', ' + getStoreAddress(rec.storeName))}`}
+          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '5px 0', fontSize: '0.75rem', textDecoration: 'none', marginTop: '4px' }}
+        >
+          <Navigation size={10} /> View in Google Maps
+        </a>
+      </div>
+    );
+  };
 
   const localCatalog = [
     { Name: 'Penne Pasta', Category: 'Pasta', PackageSize: '500g' },
@@ -86,8 +142,10 @@ export default function OptimizeBasketTab({
     setAutocompleteResults([]);
   };
 
+  const hasItems = shoppingList.length > 0;
+
   return (
-    <div className="view-section compare-grid">
+    <div className="view-section compare-grid" style={!hasItems ? { gridTemplateColumns: '1fr' } : {}}>
       {/* LEFT COLUMN: List Builder Wrapper */}
       <div className="left-column-wrapper animate-slide-up" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         <div className="glass-panel builder-card" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -248,221 +306,223 @@ export default function OptimizeBasketTab({
       </div>
 
       {/* RIGHT COLUMN: Comparison Engine Panel */}
-      <div className="comparison-panel animate-slide-up">
-        {shoppingList.length > 0 && comparison ? (
-          <>
-            {/* Hero Savings Recommendation Banner */}
-            <div className="glass-panel recommendation-banner">
-              <div>
-                <span className="rec-badge">Recommended Shop</span>
-                <h2 className="rec-title">
-                  Shop <span className="rec-savings">{getStoreDisplayName(comparison.winnerStore)}</span> this week
-                </h2>
-                <p className="rec-split-highlight">
-                  You'll save <strong style={{ color: 'var(--success)' }}>${comparison.singleStoreSavings.toFixed(2)}</strong> this week by shopping here.
-                </p>
+      {hasItems && (
+        <div className="comparison-panel animate-slide-up">
+          {comparison ? (
+            <>
+              {/* Hero Savings Recommendation Banner */}
+              <div className="glass-panel recommendation-banner">
+                <div>
+                  <span className="rec-badge">Recommended Shop</span>
+                  <h2 className="rec-title">
+                    Shop <span className="rec-savings">{getStoreDisplayName(comparison.winnerStore)}</span> this week
+                  </h2>
+                  <p className="rec-split-highlight">
+                    You'll save <strong style={{ color: 'var(--success)' }}>${comparison.singleStoreSavings.toFixed(2)}</strong> this week by shopping here.
+                  </p>
+                </div>
+                <button className="btn btn-primary" onClick={handleCheckout} disabled={loading} style={{ padding: '14px 24px' }}>
+                  Checkout & Log Savings
+                </button>
               </div>
-              <button className="btn btn-primary" onClick={handleCheckout} disabled={loading} style={{ padding: '14px 24px' }}>
-                Checkout & Log Savings
-              </button>
-            </div>
-
-            {/* Store cards grid */}
-            <div className="store-options-grid">
-              {/* Coles option */}
-              <div className={`store-option-card ${comparison.winnerStore === 'Coles' ? 'winner' : ''}`}>
-                <div className="store-option-header">
-                  <span className="store-option-name" style={{ color: 'var(--primary)' }}>{getStoreDisplayName('Coles')}</span>
-                  {comparison.winnerStore === 'Coles' && <span className="badge badge-success">Cheapest</span>}
-                </div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
-                  <MapPin size={10} /> {getStoreAddress('Coles')}
-                </div>
-                <div className="store-option-total">${comparison.coles.adjustedTotal.toFixed(2)}</div>
-                <div className="store-option-breakdown">
-                  <div className="breakdown-row">
-                    <span>Shelf Items Total</span>
-                    <span>${comparison.coles.shelfTotal.toFixed(2)}</span>
+  
+              {/* Store cards grid */}
+              <div className="store-options-grid">
+                {/* Coles option */}
+                <div className={`store-option-card ${comparison.winnerStore === 'Coles' ? 'winner' : ''}`}>
+                  <div className="store-option-header">
+                    <span className="store-option-name" style={{ color: 'var(--primary)' }}>{getStoreDisplayName('Coles')}</span>
+                    {comparison.winnerStore === 'Coles' && <span className="badge badge-success">Cheapest</span>}
                   </div>
-                  <div className="breakdown-row">
-                    <span>Travel/Fuel cost</span>
-                    <span>+${comparison.coles.fuelAdjustment.toFixed(2)}</span>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
+                    <MapPin size={10} /> {getStoreAddress('Coles')}
                   </div>
-                  <div className="breakdown-row">
-                    <span>Flybuys points value</span>
-                    <span style={{ color: 'var(--success)' }}>-${comparison.coles.rewardsValue.toFixed(2)}</span>
-                  </div>
-                  <div className="breakdown-row" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '6px', marginTop: '4px' }}>
-                    <span>Out-of-stock risk</span>
-                    <span className={comparison.coles.stockRiskPercentage > 10 ? 'stock-risk-indicator' : ''}>
-                      {comparison.coles.stockRiskPercentage > 10 && <AlertTriangle size={10} />}
-                      {comparison.coles.stockRiskPercentage}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Woolworths option */}
-              <div className={`store-option-card ${comparison.winnerStore === 'Woolworths' ? 'winner' : ''}`}>
-                <div className="store-option-header">
-                  <span className="store-option-name" style={{ color: 'var(--primary)' }}>{getStoreDisplayName('Woolworths')}</span>
-                  {comparison.winnerStore === 'Woolworths' && <span className="badge badge-success">Cheapest</span>}
-                </div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
-                  <MapPin size={10} /> {getStoreAddress('Woolworths')}
-                </div>
-                <div className="store-option-total">${comparison.woolworths.adjustedTotal.toFixed(2)}</div>
-                <div className="store-option-breakdown">
-                  <div className="breakdown-row">
-                    <span>Shelf Items Total</span>
-                    <span>${comparison.woolworths.shelfTotal.toFixed(2)}</span>
-                  </div>
-                  <div className="breakdown-row">
-                    <span>Travel/Fuel cost</span>
-                    <span>+${comparison.woolworths.fuelAdjustment.toFixed(2)}</span>
-                  </div>
-                  <div className="breakdown-row">
-                    <span>Rewards points value</span>
-                    <span style={{ color: 'var(--success)' }}>-${comparison.woolworths.rewardsValue.toFixed(2)}</span>
-                  </div>
-                  <div className="breakdown-row" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '6px', marginTop: '4px' }}>
-                    <span>Out-of-stock risk</span>
-                    <span className={comparison.woolworths.stockRiskPercentage > 10 ? 'stock-risk-indicator' : ''}>
-                      {comparison.woolworths.stockRiskPercentage > 10 && <AlertTriangle size={10} />}
-                      {comparison.woolworths.stockRiskPercentage}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Item-by-item comparison table */}
-            <div className="glass-panel breakdown-card">
-              <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>Itemized Comparison Details</h3>
-              <div className="breakdown-table-wrapper">
-                <table className="breakdown-table">
-                  <thead>
-                    <tr>
-                      <th>Item Name</th>
-                      <th>{getStoreDisplayName('Coles')}</th>
-                      <th>{getStoreDisplayName('Woolworths')}</th>
-                      <th>Stock Reliability</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {shoppingList.map((item, idx) => {
-                      const cItem = comparison.coles.basketItems[idx];
-                      const wItem = comparison.woolworths.basketItems[idx];
-                      if (!cItem || !wItem) return null;
-
-                      const cMatched = cItem.matchedItem || cItem.MatchedItem || {};
-                      const wMatched = wItem.matchedItem || wItem.MatchedItem || {};
-
-                      const colesPrice = cMatched.shelfPrice || 0;
-                      const wooliesPrice = wMatched.shelfPrice || 0;
-                      
-                      const colesCheaper = colesPrice <= wooliesPrice;
-                      const wooliesCheaper = wooliesPrice < colesPrice;
-
-                      const cIsSpecial = cItem.isSpecial || cItem.IsSpecial;
-                      const wIsSpecial = wItem.isSpecial || wItem.IsSpecial;
-
-                      const cStockRisk = cMatched.outOfStockProbability || 0;
-                      const wStockRisk = wMatched.outOfStockProbability || 0;
-
-                      return (
-                        <tr key={idx}>
-                          <td>
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                              <span style={{ fontWeight: 600 }}>{item.itemName}</span>
-                              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                                Qty: {item.quantity} | {cMatched.packageSize || 'ea'}
-                              </span>
-                            </div>
-                          </td>
-                          <td>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                              <span className={colesCheaper ? 'best-price-highlight' : ''}>
-                                ${(colesPrice * item.quantity).toFixed(2)}
-                              </span>
-                              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                                (${colesPrice.toFixed(2)} ea)
-                              </span>
-                              {cIsSpecial && <span className="badge badge-special" style={{ fontSize: '0.6rem', padding: '2px 4px', width: 'fit-content' }}>Special</span>}
-                            </div>
-                          </td>
-                          <td>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                              <span className={wooliesCheaper ? 'best-price-highlight' : ''}>
-                                ${(wooliesPrice * item.quantity).toFixed(2)}
-                              </span>
-                              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                                (${wooliesPrice.toFixed(2)} ea)
-                              </span>
-                              {wIsSpecial && <span className="badge badge-special" style={{ fontSize: '0.6rem', padding: '2px 4px', width: 'fit-content' }}>Special</span>}
-                            </div>
-                          </td>
-                          <td>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              <div style={{ fontSize: '0.8rem' }}>
-                                C: {Math.round((1 - cStockRisk) * 100)}% | W: {Math.round((1 - wStockRisk) * 100)}%
-                              </div>
-                              {((cIsSpecial && cStockRisk > 0.1) || (wIsSpecial && wStockRisk > 0.1)) && (
-                                <span className="stock-risk-indicator" style={{ fontSize: '0.68rem' }}>
-                                  <AlertTriangle size={10} /> Special stock risk
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Scanned Receipts Summary */}
-            {scannedReceipts.length > 0 && (
-              <div className="glass-panel breakdown-card" style={{ marginTop: '24px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                  <Receipt size={18} style={{ color: 'var(--blue-600)' }} />
-                  <h3 style={{ margin: 0, fontSize: '1rem' }}>Scanned Receipts</h3>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {scannedReceipts.map((receipt) => (
-                    <div key={receipt.id} className="glass-panel" style={{ padding: '12px', border: '1px solid var(--border-glass)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <MapPin size={14} style={{ color: 'var(--blue-500)' }} />
-                          <span style={{ fontWeight: 700, color: 'var(--primary)' }}>{receipt.storeDisplayName}</span>
-                        </div>
-                        <span style={{ fontWeight: 700, fontSize: '1rem' }}>${(receipt.receiptTotal || 0).toFixed(2)}</span>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        {receipt.items.map((item, i) => (
-                          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: 'var(--text-muted)', padding: '2px 0' }}>
-                            <span>{item.itemName} {item.quantity > 1 ? `x${item.quantity}` : ''}</span>
-                            <span>${(item.totalPrice || 0).toFixed(2)}</span>
-                          </div>
-                        ))}
-                      </div>
+                  <div className="store-option-total">${comparison.coles.adjustedTotal.toFixed(2)}</div>
+                  <div className="store-option-breakdown">
+                    <div className="breakdown-row">
+                      <span>Shelf Items Total</span>
+                      <span>${comparison.coles.shelfTotal.toFixed(2)}</span>
                     </div>
-                  ))}
+                    <div className="breakdown-row">
+                      <span>Travel/Fuel cost</span>
+                      <span>+${comparison.coles.fuelAdjustment.toFixed(2)}</span>
+                    </div>
+                    <div className="breakdown-row">
+                      <span>Flybuys points value</span>
+                      <span style={{ color: 'var(--success)' }}>-${comparison.coles.rewardsValue.toFixed(2)}</span>
+                    </div>
+                    <div className="breakdown-row" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '6px', marginTop: '4px' }}>
+                      <span>Out-of-stock risk</span>
+                      <span className={comparison.coles.stockRiskPercentage > 10 ? 'stock-risk-indicator' : ''}>
+                        {comparison.coles.stockRiskPercentage > 10 && <AlertTriangle size={10} />}
+                        {comparison.coles.stockRiskPercentage}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+  
+                {/* Woolworths option */}
+                <div className={`store-option-card ${comparison.winnerStore === 'Woolworths' ? 'winner' : ''}`}>
+                  <div className="store-option-header">
+                    <span className="store-option-name" style={{ color: 'var(--primary)' }}>{getStoreDisplayName('Woolworths')}</span>
+                    {comparison.winnerStore === 'Woolworths' && <span className="badge badge-success">Cheapest</span>}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
+                    <MapPin size={10} /> {getStoreAddress('Woolworths')}
+                  </div>
+                  <div className="store-option-total">${comparison.woolworths.adjustedTotal.toFixed(2)}</div>
+                  <div className="store-option-breakdown">
+                    <div className="breakdown-row">
+                      <span>Shelf Items Total</span>
+                      <span>${comparison.woolworths.shelfTotal.toFixed(2)}</span>
+                    </div>
+                    <div className="breakdown-row">
+                      <span>Travel/Fuel cost</span>
+                      <span>+${comparison.woolworths.fuelAdjustment.toFixed(2)}</span>
+                    </div>
+                    <div className="breakdown-row">
+                      <span>Rewards points value</span>
+                      <span style={{ color: 'var(--success)' }}>-${comparison.woolworths.rewardsValue.toFixed(2)}</span>
+                    </div>
+                    <div className="breakdown-row" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '6px', marginTop: '4px' }}>
+                      <span>Out-of-stock risk</span>
+                      <span className={comparison.woolworths.stockRiskPercentage > 10 ? 'stock-risk-indicator' : ''}>
+                        {comparison.woolworths.stockRiskPercentage > 10 && <AlertTriangle size={10} />}
+                        {comparison.woolworths.stockRiskPercentage}%
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            )}
-          </>
-        ) : (
-          <div className="glass-panel" style={{ padding: '60px', textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', gap: '16px' }}>
-            <ShoppingBag size={48} style={{ color: 'var(--text-muted)' }} />
-            <div>
-              <h3 style={{ color: '#fff', fontSize: '1.2rem', marginBottom: '4px' }}>Awaiting shopping list...</h3>
-              <p style={{ fontSize: '0.9rem' }}>Add some grocery items to start running comparison optimizations</p>
+  
+              {/* Item-by-item comparison table */}
+              <div className="glass-panel breakdown-card">
+                <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>Itemized Comparison Details</h3>
+                <div className="breakdown-table-wrapper">
+                  <table className="breakdown-table">
+                    <thead>
+                      <tr>
+                        <th>Item Name</th>
+                        <th>{getStoreDisplayName('Coles')}</th>
+                        <th>{getStoreDisplayName('Woolworths')}</th>
+                        <th>Stock Reliability</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {shoppingList.map((item, idx) => {
+                        const cItem = comparison.coles.basketItems[idx];
+                        const wItem = comparison.woolworths.basketItems[idx];
+                        if (!cItem || !wItem) return null;
+  
+                        const cMatched = cItem.matchedItem || cItem.MatchedItem || {};
+                        const wMatched = wItem.matchedItem || wItem.MatchedItem || {};
+  
+                        const colesPrice = cMatched.shelfPrice || 0;
+                        const wooliesPrice = wMatched.shelfPrice || 0;
+                        
+                        const colesCheaper = colesPrice <= wooliesPrice;
+                        const wooliesCheaper = wooliesPrice < colesPrice;
+  
+                        const cIsSpecial = cItem.isSpecial || cItem.IsSpecial;
+                        const wIsSpecial = wItem.isSpecial || wItem.IsSpecial;
+  
+                        const cStockRisk = cMatched.outOfStockProbability || 0;
+                        const wStockRisk = wMatched.outOfStockProbability || 0;
+  
+                        return (
+                          <tr key={idx}>
+                            <td>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span style={{ fontWeight: 600 }}>{item.itemName}</span>
+                                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                  Qty: {item.quantity} | {cMatched.packageSize || 'ea'}
+                                </span>
+                              </div>
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <span className={colesCheaper ? 'best-price-highlight' : ''}>
+                                  ${(colesPrice * item.quantity).toFixed(2)}
+                                </span>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                                  (${colesPrice.toFixed(2)} ea)
+                                </span>
+                                {cIsSpecial && <span className="badge badge-special" style={{ fontSize: '0.6rem', padding: '2px 4px', width: 'fit-content' }}>Special</span>}
+                              </div>
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <span className={wooliesCheaper ? 'best-price-highlight' : ''}>
+                                  ${(wooliesPrice * item.quantity).toFixed(2)}
+                                </span>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                                  (${wooliesPrice.toFixed(2)} ea)
+                                </span>
+                                {wIsSpecial && <span className="badge badge-special" style={{ fontSize: '0.6rem', padding: '2px 4px', width: 'fit-content' }}>Special</span>}
+                              </div>
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <div style={{ fontSize: '0.8rem' }}>
+                                  C: {Math.round((1 - cStockRisk) * 100)}% | W: {Math.round((1 - wStockRisk) * 100)}%
+                                </div>
+                                {((cIsSpecial && cStockRisk > 0.1) || (wIsSpecial && wStockRisk > 0.1)) && (
+                                  <span className="stock-risk-indicator" style={{ fontSize: '0.68rem' }}>
+                                    <AlertTriangle size={10} /> Special stock risk
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+  
+              {/* Scanned Receipts Summary */}
+              {scannedReceipts.length > 0 && (
+                <div className="glass-panel breakdown-card" style={{ marginTop: '24px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                    <Receipt size={18} style={{ color: 'var(--blue-600)' }} />
+                    <h3 style={{ margin: 0, fontSize: '1rem' }}>Scanned Receipts</h3>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {scannedReceipts.map((receipt) => (
+                      <div key={receipt.id} className="glass-panel" style={{ padding: '12px', border: '1px solid var(--border-glass)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <MapPin size={14} style={{ color: 'var(--blue-500)' }} />
+                            <span style={{ fontWeight: 700, color: 'var(--primary)' }}>{receipt.storeDisplayName}</span>
+                          </div>
+                          <span style={{ fontWeight: 700, fontSize: '1rem' }}>${(receipt.receiptTotal || 0).toFixed(2)}</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          {receipt.items.map((item, i) => (
+                            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: 'var(--text-muted)', padding: '2px 0' }}>
+                              <span>{item.itemName} {item.quantity > 1 ? `x${item.quantity}` : ''}</span>
+                              <span>${(item.totalPrice || 0).toFixed(2)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="glass-panel" style={{ padding: '60px', textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', gap: '16px' }}>
+              <RefreshCw size={24} className="animate-spin" style={{ animation: 'spin 1.5s linear infinite', color: 'var(--primary)' }} />
+              <div>
+                <h3 style={{ color: '#fff', fontSize: '1.2rem', marginBottom: '4px' }}>Calculating savings...</h3>
+                <p style={{ fontSize: '0.9rem' }}>Fetching the latest price comparisons</p>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

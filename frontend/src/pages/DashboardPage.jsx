@@ -498,7 +498,7 @@ function DashboardPage({ user, onLogout }) {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
     setUploadedFiles(prev => [...prev, ...files]);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    e.target.value = "";
   };
 
   const handleRemoveFile = (index) => {
