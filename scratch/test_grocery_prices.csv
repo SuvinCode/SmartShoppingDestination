@@ -1,0 +1,17 @@
+sku,store,name,category,price,is_special,special_details,package_size,unit_type,unit_quantity
+101,Coles,Coles Penne Pasta 500g,Pasta,1.35,FALSE,,500g,g,500
+102,Woolworths,Woolworths Penne Pasta 500g,Pasta,1.35,FALSE,,500g,g,500
+103,Coles,De Cecco Spaghetti 500g,Pasta,4.60,FALSE,,500g,g,500
+104,Woolworths,De Cecco Spaghetti 500g,Pasta,4.75,FALSE,,500g,g,500
+105,Coles,Coles Fresh Full Cream Milk 2L,Milk,3.20,FALSE,,2L,ml,2000
+106,Woolworths,Woolworths Full Cream Milk 2L,Milk,3.20,FALSE,,2L,ml,2000
+107,Coles,Devondale UHT Full Cream Milk 1L,Milk,2.10,TRUE,Save $0.30,1L,ml,1000
+108,Woolworths,Devondale UHT Full Cream Milk 1L,Milk,2.40,FALSE,,1L,ml,1000
+109,Coles,Cadbury Dairy Milk Chocolate Block 180g,Chocolate,6.00,FALSE,,180g,g,180
+110,Woolworths,Cadbury Dairy Milk Chocolate Block 180g,Chocolate,3.25,TRUE,1/2 Price Special,180g,g,180
+111,Coles,Heinz Baked Beans 220g,Beans,2.60,FALSE,,220g,g,220
+112,Woolworths,Heinz Baked Beans 220g,Beans,2.20,FALSE,,220g,g,220
+113,Coles,Bega Peanut Butter Smooth 375g,Spreads,5.50,FALSE,,375g,g,375
+114,Woolworths,Bega Peanut Butter Smooth 375g,Spreads,5.20,TRUE,Special,375g,g,375
+115,Coles,Morning Fresh Dishwashing Liquid 900ml,Dishwashing,9.00,FALSE,,900ml,ml,900
+116,Woolworths,Morning Fresh Dishwashing Liquid 900ml,Dishwashing,4.50,TRUE,1/2 Price,900ml,ml,900

@@ -477,32 +477,6 @@ namespace backend.Services
                    $"{closest.StoreName} saves ${savingDiff:F2} less but is only {closest.DistanceKm:F1} km from you.";
         }
 
-        private SplitShopSuggestion? BuildSplitShopSuggestion(
-            List<StoreSavingsResult> topSavings,
-            List<ProximityResult> topProximity,
-            Dictionary<string, double> storeDistances)
-        {
-            if (topSavings.Count < 2) return null;
-
-            var first = topSavings[0];
-            var second = topSavings[1];
-
-            // Suggest split only if both stores are within 5 km of each other
-            bool firstHasDistance = storeDistances.TryGetValue(first.StoreName, out double d1);
-            bool secondHasDistance = storeDistances.TryGetValue(second.StoreName, out double d2);
-            if (!firstHasDistance || !secondHasDistance) return null;
-
-            double distanceBetween = Math.Abs(d1 - d2);
-            if (distanceBetween > 5.0) return null;
-
-            // Primary items = winning products from first store (top 3)
-            var primaryItems = first.WinningProducts.Take(3).ToList();
-            decimal extraSaving = Math.Max(0, first.EstimatedWeeklySaving + second.EstimatedWeeklySaving
-                                             - Math.Max(first.EstimatedWeeklySaving, second.EstimatedWeeklySaving));
-            if (extraSaving < 3.0M) return null; // not worth a split trip for less than $3
-
-            return new SplitShopSuggestion(first.StoreName, second.StoreName, primaryItems, extraSaving);
-        }
 
         private enum SpecialPriceType
         {

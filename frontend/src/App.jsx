@@ -27,6 +27,10 @@ function App() {
   };
 
   const handleLogout = () => {
+    if (user && user.username.toLowerCase() === 'demo') {
+      fetch(`${API_URL}/dashboard/reset-account?userId=${user.userId}`, { method: 'POST' })
+        .catch(err => console.error("Error resetting demo account on logout:", err));
+    }
     setUser(null);
     localStorage.removeItem('docket_user');
     setView('landing');

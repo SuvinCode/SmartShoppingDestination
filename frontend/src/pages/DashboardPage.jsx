@@ -14,6 +14,7 @@ import OptimizeBasketTab from '../components/OptimizeBasketTab';
 import SavingsHistoryTab from '../components/SavingsHistoryTab';
 import MySettingsTab from '../components/MySettingsTab';
 import ComparisonTab from '../components/ComparisonTab';
+import Footer from '../components/Footer';
 
 function DashboardPage({ user, onLogout }) {
   const [activeTab, setActiveTab] = useState('compare'); // 'compare' | 'analytics' | 'settings' | 'recommendations'
@@ -378,27 +379,41 @@ function DashboardPage({ user, onLogout }) {
   };
 
 
+  // 7. Toggle loyalty card preferences directly
+  const handleToggleLoyalty = async (key) => {
+    const updatedValue = !preferences[key];
+    const newPrefs = {
+      ...preferences,
+      [key]: updatedValue
+    };
+    
+    // Update local state first so UI changes instantly
+    setPreferences(newPrefs);
 
-  // 7. Sync Loyalty purchase history
-  const handleSyncLoyalty = async () => {
-    setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/lists/sync-loyalty?userId=${user.userId}`, { method: 'POST' });
+      const payload = {
+        distanceToColesKm: newPrefs.distanceToColesKm,
+        distanceToWoolworthsKm: newPrefs.distanceToWoolworthsKm,
+        fuelCostPerKm: newPrefs.fuelCostPerKm,
+        hasFlybuys: newPrefs.hasFlybuys,
+        hasEverydayRewards: newPrefs.hasEverydayRewards,
+        minSplitSavingThreshold: newPrefs.minSplitSavingThreshold,
+        region: newPrefs.region || 'Melbourne'
+      };
+      const response = await fetch(`${API_URL}/preferences?userId=${user.userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
       if (!response.ok) throw new Error();
-      const data = await response.json();
-      setShoppingList(data);
-      showToast('Synced history from Flybuys & Everyday Rewards!');
+      localStorage.setItem(`docket_home_address_${user.userId}`, newPrefs.homeAddress || 'Richmond VIC');
+      localStorage.setItem(`docket_region_${user.userId}`, newPrefs.region || 'Melbourne');
+      showToast('Loyalty membership updated!');
+      await loadStoreRecommendations();
     } catch {
-      // Offline fallback
-      setShoppingList([
-        { id: 101, itemName: "White Toast Bread", quantity: 1, packageSize: "650g" },
-        { id: 102, itemName: "Fresh Full Cream Milk", quantity: 2, packageSize: "2L" },
-        { id: 103, itemName: "Bega Tasty Cheese Block", quantity: 1, packageSize: "500g" },
-        { id: 104, itemName: "Cavendish Bananas", quantity: 1, packageSize: "1kg" }
-      ]);
-      showToast('Synced loyalty history (offline)');
-    } finally {
-      setLoading(false);
+      localStorage.setItem(`docket_home_address_${user.userId}`, newPrefs.homeAddress || 'Richmond VIC');
+      localStorage.setItem(`docket_region_${user.userId}`, newPrefs.region || 'Melbourne');
+      showToast('Loyalty membership updated locally (offline)');
     }
   };
 
@@ -665,6 +680,51 @@ function DashboardPage({ user, onLogout }) {
     }
   };
 
+  const handleResetAccount = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/dashboard/reset-account?userId=${user.userId}`, {
+        method: 'POST'
+      });
+      if (!response.ok) throw new Error();
+      
+      const defaultPrefs = {
+        distanceToColesKm: 5.0,
+        distanceToWoolworthsKm: 4.0,
+        fuelCostPerKm: 0.15,
+        hasFlybuys: false,
+        hasEverydayRewards: false,
+        minSplitSavingThreshold: 5.00,
+        region: 'Melbourne',
+        homeAddress: 'Richmond VIC'
+      };
+      setPreferences(defaultPrefs);
+      
+      localStorage.removeItem(`docket_home_address_${user.userId}`);
+      localStorage.removeItem(`docket_region_${user.userId}`);
+      
+      setShoppingList([]);
+      setComparison(null);
+      setScannedReceipts([]);
+      
+      setSavingsStats({
+        cumulativeSavings: 0,
+        totalSpent: 0,
+        totalShops: 0,
+        averageSavings: 0,
+        history: []
+      });
+
+      showToast("Account reset successfully!");
+      await loadStoreRecommendations();
+      await loadNotifications();
+    } catch (err) {
+      showToast("Failed to reset account.", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleMarkNotificationsRead = () => {
     setNotifications(notifications.map(n => ({ ...n, read: true })));
     setUnreadCount(0);
@@ -808,7 +868,7 @@ function DashboardPage({ user, onLogout }) {
             handleFileChange={handleFileChange}
             handleRemoveFile={handleRemoveFile}
             handleScanDocuments={handleScanDocuments}
-            handleSyncLoyalty={handleSyncLoyalty}
+            handleToggleLoyalty={handleToggleLoyalty}
             handleCheckout={handleCheckout}
             getStoreDisplayName={getStoreDisplayName}
             getStoreAddress={getStoreAddress}
@@ -836,9 +896,11 @@ function DashboardPage({ user, onLogout }) {
             setPreferences={setPreferences}
             handleSavePreferences={handleSavePreferences}
             loading={loading}
+            handleResetAccount={handleResetAccount}
           />
         )}
       </div>
+      <Footer />
     </div>
   );
 }

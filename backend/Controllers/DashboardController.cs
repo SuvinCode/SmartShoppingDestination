@@ -79,15 +79,48 @@ namespace backend.Controllers
                 },
                 new {
                     Id = 3,
-                    Title = "Split Shop Suggestion 💡",
-                    Message = "You can save an extra $6.00 by buying morning fresh and chocolate at Woolworths, and milk at Coles.",
+                    Title = "Coles Special Alert 🧀",
+                    Message = "Bega Tasty Cheese Block 500g is currently on special for $8.50 at Coles! Normal price is $9.50.",
                     Timestamp = DateTime.UtcNow.AddDays(-3).ToString("g"),
                     Read = true,
-                    Type = "recommendation"
+                    Type = "special_alert"
                 }
             };
 
             return Ok(notifications);
+        }
+
+        [HttpPost("reset-account")]
+        public IActionResult ResetAccount([FromQuery] int userId)
+        {
+            var logs = _context.SavingLogs.Where(l => l.UserId == userId).ToList();
+            if (logs.Any())
+            {
+                _context.SavingLogs.RemoveRange(logs);
+            }
+
+            var listItems = _context.ShoppingListItems.Where(i => i.UserId == userId).ToList();
+            if (listItems.Any())
+            {
+                _context.ShoppingListItems.RemoveRange(listItems);
+            }
+
+            var prefs = _context.UserPreferences.FirstOrDefault(p => p.UserId == userId);
+            if (prefs != null)
+            {
+                prefs.UpdatePreferences(
+                    distanceColes: 5.0,
+                    distanceWoolies: 4.0,
+                    fuelCost: 0.15M,
+                    hasFlybuys: false,
+                    hasRewards: false,
+                    minSplitSaving: 5.00M,
+                    region: "Melbourne"
+                );
+            }
+
+            _context.SaveChanges();
+            return Ok(new { message = "Account reset successfully." });
         }
     }
 }

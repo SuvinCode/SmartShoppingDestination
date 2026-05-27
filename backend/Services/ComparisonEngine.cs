@@ -47,55 +47,10 @@ namespace backend.Services
             var colesResult = new StoreOptionResult("Coles", colesMatched, prefs);
             var woolworthsResult = new StoreOptionResult("Woolworths", woolworthsMatched, prefs);
 
-            // Calculate Split Shop option
+            // Calculate Split Shop option - Mocked/Bypassed
             var splitColesBasket = new List<MatchedBasketItem>();
             var splitWoolworthsBasket = new List<MatchedBasketItem>();
-
-            foreach (var listItem in listItems)
-            {
-                var colesItem = colesMatched.FirstOrDefault(i => i.ListItemId == listItem.Id);
-                var woolworthsItem = woolworthsMatched.FirstOrDefault(i => i.ListItemId == listItem.Id);
-
-                if (colesItem != null && woolworthsItem != null)
-                {
-                    decimal colesUnitCost = colesItem.MatchedItem.ShelfPrice / (decimal)colesItem.MatchedItem.UnitQuantity;
-                    decimal woolworthsUnitCost = woolworthsItem.MatchedItem.ShelfPrice / (decimal)woolworthsItem.MatchedItem.UnitQuantity;
-
-                    if (colesItem.MatchedItem.PackageSize != woolworthsItem.MatchedItem.PackageSize)
-                    {
-                        if (colesUnitCost <= woolworthsUnitCost)
-                        {
-                            splitColesBasket.Add(colesItem);
-                        }
-                        else
-                        {
-                            splitWoolworthsBasket.Add(woolworthsItem);
-                        }
-                    }
-                    else
-                    {
-                        if (colesItem.TotalPrice <= woolworthsItem.TotalPrice)
-                        {
-                            splitColesBasket.Add(colesItem);
-                        }
-                        else
-                        {
-                            splitWoolworthsBasket.Add(woolworthsItem);
-                        }
-                    }
-                }
-                else if (colesItem != null)
-                {
-                    splitColesBasket.Add(colesItem);
-                }
-                else if (woolworthsItem != null)
-                {
-                    splitWoolworthsBasket.Add(woolworthsItem);
-                }
-            }
-
-            var allSplitItems = splitColesBasket.Concat(splitWoolworthsBasket).ToList();
-            var splitResult = new StoreOptionResult("Split Shop", allSplitItems, prefs);
+            var splitResult = new StoreOptionResult("Split Shop", new List<MatchedBasketItem>(), prefs);
 
             // Return consolidated comparison result (which encapsulates the winning store selection)
             return new ComparisonResult(colesResult, woolworthsResult, splitResult, splitColesBasket, splitWoolworthsBasket, prefs);
@@ -131,7 +86,7 @@ namespace backend.Services
 
     public class ComparisonResult
     {
-        public string WinnerStore { get; private set; } = ""; // "Coles", "Woolworths", or "Split Shop"
+        public string WinnerStore { get; private set; } = ""; // "Coles" or "Woolworths"
         public string SingleStoreWinner { get; private set; } = ""; // "Coles" or "Woolworths"
         public decimal TotalSavings { get; private set; }
         public decimal SingleStoreSavings { get; private set; }
@@ -161,22 +116,10 @@ namespace backend.Services
 
             SingleStoreSavings = Math.Max(0, worstSingleTotal - bestSingleTotal);
 
-            decimal splitSavingVsBestSingle = bestSingleTotal - Split.AdjustedTotal;
-
-            if (splitSavingVsBestSingle > prefs.MinSplitSavingThreshold && SplitColesBasket.Count > 0 && SplitWoolworthsBasket.Count > 0)
-            {
-                WinnerStore = "Split Shop";
-                TotalSavings = worstSingleTotal - Split.AdjustedTotal;
-                SplitExtraSavings = splitSavingVsBestSingle;
-                IsSplitRecommended = true;
-            }
-            else
-            {
-                WinnerStore = SingleStoreWinner;
-                TotalSavings = SingleStoreSavings;
-                SplitExtraSavings = Math.Max(0, splitSavingVsBestSingle);
-                IsSplitRecommended = false;
-            }
+            WinnerStore = SingleStoreWinner;
+            TotalSavings = SingleStoreSavings;
+            SplitExtraSavings = 0M;
+            IsSplitRecommended = false;
         }
     }
 

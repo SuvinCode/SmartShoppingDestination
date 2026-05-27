@@ -58,12 +58,26 @@ namespace backend.Controllers
                 return Unauthorized(new { message = "Invalid username or password" });
             }
 
-            // Clear shopping list items upon login to ensure it starts fresh
-            var listItems = _context.ShoppingListItems.Where(i => i.UserId == user.Id && !i.IsCompleted).ToList();
-            if (listItems.Any())
+            // Clear shopping list items upon login to ensure it starts fresh:
+            // For the 'demo' user, clear all list items (active and completed history).
+            // For registered users, only clear active/uncompleted list items, preserving history.
+            if (user.Username.ToLower() == "demo")
             {
-                _context.ShoppingListItems.RemoveRange(listItems);
-                _context.SaveChanges();
+                var listItems = _context.ShoppingListItems.Where(i => i.UserId == user.Id).ToList();
+                if (listItems.Any())
+                {
+                    _context.ShoppingListItems.RemoveRange(listItems);
+                    _context.SaveChanges();
+                }
+            }
+            else
+            {
+                var activeItems = _context.ShoppingListItems.Where(i => i.UserId == user.Id && !i.IsCompleted).ToList();
+                if (activeItems.Any())
+                {
+                    _context.ShoppingListItems.RemoveRange(activeItems);
+                    _context.SaveChanges();
+                }
             }
 
             return Ok(new { userId = user.Id, username = user.Username });

@@ -81,6 +81,18 @@ namespace backend.Controllers
             return Ok(new { message = "List cleared" });
         }
 
+        [HttpPost("clear-history")]
+        public IActionResult ClearHistory([FromQuery] int userId)
+        {
+            var items = _context.ShoppingListItems.Where(i => i.UserId == userId).ToList();
+            if (items.Any())
+            {
+                _context.ShoppingListItems.RemoveRange(items);
+                _context.SaveChanges();
+            }
+            return Ok(new { message = "All list and receipt history cleared" });
+        }
+
         [HttpPost("sync-loyalty")]
         public IActionResult SyncLoyalty([FromQuery] int userId)
         {
@@ -208,8 +220,11 @@ namespace backend.Controllers
 
             _context.SavingLogs.Add(log);
             
-            var listItems = _context.ShoppingListItems.Where(i => i.UserId == userId).ToList();
-            _context.ShoppingListItems.RemoveRange(listItems);
+            var activeItems = _context.ShoppingListItems.Where(i => i.UserId == userId && !i.IsCompleted).ToList();
+            foreach (var item in activeItems)
+            {
+                item.ToggleCompletion();
+            }
             
             _context.SaveChanges();
             return Ok(new { message = "Checkout logged, list cleared", log });

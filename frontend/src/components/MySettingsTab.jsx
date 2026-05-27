@@ -49,7 +49,8 @@ export default function MySettingsTab({
   preferences,
   setPreferences,
   handleSavePreferences,
-  loading
+  loading,
+  handleResetAccount
 }) {
   const [searchVal, setSearchVal] = useState(preferences.homeAddress || '');
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -123,7 +124,9 @@ export default function MySettingsTab({
         const wooliesDist = Math.max(0.8, Math.round((Math.abs(lng) * 100 % 7 + 1) * 10) / 10);
         
         let detectedReg = "Melbourne";
-        if (lat > -35.0) {
+        if (lat > -30.0) {
+          detectedReg = "Brisbane";
+        } else if (lat > -35.0) {
           detectedReg = "Sydney";
         }
 
@@ -301,6 +304,35 @@ export default function MySettingsTab({
           <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%', padding: '12px', marginTop: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: 'bold' }}>
             {loading ? 'Saving Preferences...' : 'Save Settings'}
           </button>
+
+          <div style={{ marginTop: '20px', borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '15px' }}>
+            <button 
+              type="button" 
+              className="btn" 
+              disabled={loading} 
+              onClick={() => {
+                if (window.confirm("Are you sure you want to completely reset all settings, lists, and savings history for your account? This action cannot be undone.")) {
+                  handleResetAccount();
+                }
+              }}
+              style={{ 
+                width: '100%', 
+                padding: '12px', 
+                background: 'rgba(239, 68, 68, 0.1)', 
+                border: '1px solid rgba(239, 68, 68, 0.4)', 
+                color: 'rgb(248, 113, 113)', 
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                gap: '6px',
+                borderRadius: '8px'
+              }}
+            >
+              Reset Account Data
+            </button>
+          </div>
         </form>
       </div>
     </div>

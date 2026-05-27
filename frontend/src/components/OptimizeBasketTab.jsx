@@ -5,7 +5,6 @@ import {
   ScanLine, 
   RefreshCw, 
   ShoppingBag, 
-  CreditCard, 
   Trophy, 
   MapPin, 
   AlertTriangle, 
@@ -30,7 +29,7 @@ export default function OptimizeBasketTab({
   handleFileChange,
   handleRemoveFile,
   handleScanDocuments,
-  handleSyncLoyalty,
+  handleToggleLoyalty,
   handleCheckout,
   getStoreDisplayName,
   getStoreAddress
@@ -274,18 +273,32 @@ export default function OptimizeBasketTab({
             </button>
           </div>
 
-          {/* Loyalty card purchase history import */}
-          <div className="loyalty-sync-box">
-            <span className="loyalty-title">Sync Loyalty Purchase History</span>
-            <div className="loyalty-buttons">
-              <button className="btn btn-secondary" onClick={handleSyncLoyalty} style={{ flex: 1, padding: '8px 10px', fontSize: '0.8rem' }}>
-                <CreditCard size={14} /> Flybuys Sync
-              </button>
-              <button className="btn btn-secondary" onClick={handleSyncLoyalty} style={{ flex: 1, padding: '8px 10px', fontSize: '0.8rem' }}>
-                <CreditCard size={14} /> Rewards Sync
-              </button>
+          {/* Loyalty card memberships */}
+          {(uploadedFiles.length > 0 || scannedReceipts.length > 0) && (
+            <div className="loyalty-sync-box" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <span className="loyalty-title" style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)' }}>Loyalty Memberships</span>
+              <div className="checkbox-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={preferences.hasFlybuys || false} 
+                    onChange={() => handleToggleLoyalty('hasFlybuys')}
+                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                  />
+                  <span>Coles Flybuys (0.5% rebate + bonus points)</span>
+                </label>
+                <label className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={preferences.hasEverydayRewards || false} 
+                    onChange={() => handleToggleLoyalty('hasEverydayRewards')}
+                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                  />
+                  <span>Everyday Rewards (0.5% rebate + bonus points)</span>
+                </label>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Recommendations Box */}

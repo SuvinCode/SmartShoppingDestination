@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 
 import Logo from '../components/Logo';
+import Footer from '../components/Footer';
 
 function LandingPage({ user, onNavigate, onLogout }) {
   // Interactive Demo State
@@ -109,7 +110,7 @@ function LandingPage({ user, onNavigate, onLogout }) {
             Let AI Optimize Your Basket.
           </h1>
           <p className="hero-subtitle">
-            Docket automatically compares prices between Coles and Woolworths, indexes weekly specials, extracts receipt data, and computes optimal split-shopping recommendations to maximize your weekly savings.
+            Docket automatically compares prices between Coles and Woolworths, indexes weekly specials, extracts receipt data, and recommends the cheapest store to maximize your weekly savings.
           </p>
           <div className="hero-ctas">
             {user ? (
@@ -198,19 +199,6 @@ function LandingPage({ user, onNavigate, onLogout }) {
                       <div className="demo-store-price">${wooliesTotal.toFixed(2)}</div>
                     </div>
                   </div>
-
-                  <div className="demo-split-box">
-                    <div className="demo-split-info">
-                      <span className="demo-split-title">💡 Split Shopping Recommendation</span>
-                      <span className="demo-split-desc">Visit both stores (split items by cheapest)</span>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div className="demo-split-price">${splitTotal.toFixed(2)}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--success)', fontWeight: 'bold' }}>
-                        You'll save an extra ${splitExtra.toFixed(2)}
-                      </div>
-                    </div>
-                  </div>
                 </>
               ) : (
                 <div className="glass-panel" style={{ padding: '60px', textAlign: 'center', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
@@ -251,29 +239,9 @@ function LandingPage({ user, onNavigate, onLogout }) {
               <div className="feature-icon-wrapper">
                 <MapPin size={24} />
               </div>
-              <h3 className="feature-item-title">Google Maps Integration</h3>
+              <h3 className="feature-item-title">Regional Location Awareness</h3>
               <p className="feature-item-desc">
-                Locates nearest stores with travel times and distance. Factors fuel costs into savings trade-offs, and plots optimal multi-stop split-shopping routes.
-              </p>
-            </div>
-
-            <div className="glass-panel feature-item-card">
-              <div className="feature-icon-wrapper">
-                <Sparkles size={24} />
-              </div>
-              <h3 className="feature-item-title">The Data Flywheel</h3>
-              <p className="feature-item-desc">
-                Every receipt upload makes the recommendation engine smarter. Compiles aggregated pricing patterns and learns user brand preferences to improve long-term utility.
-              </p>
-            </div>
-
-            <div className="glass-panel feature-item-card">
-              <div className="feature-icon-wrapper">
-                <Zap size={24} />
-              </div>
-              <h3 className="feature-item-title">Technical Stack</h3>
-              <p className="feature-item-desc">
-                Powered by Google Vision API/Textract for OCR, lightweight RapidFuzz ML models for catalog matching, and Google Maps API for geolocated routing.
+                Intelligent location detection maps your coordinates or address to local regions (Melbourne, Sydney, Brisbane). Ensures store distance profiles are accurate and relevant to your physical location.
               </p>
             </div>
 
@@ -281,9 +249,9 @@ function LandingPage({ user, onNavigate, onLogout }) {
               <div className="feature-icon-wrapper">
                 <TrendingUp size={24} />
               </div>
-              <h3 className="feature-item-title">Top-5 Store Ranking Engine</h3>
+              <h3 className="feature-item-title">Coles vs. Woolworths Comparison</h3>
               <p className="feature-item-desc">
-                A 6-phase algorithm ranks stores across Coles, Woolworths, Aldi, IGA, and Costco by how well they cover your most-purchased items — weighted by purchase frequency — and reconciles it with a proximity layer so you always get the right trade-off.
+                Our recommendation engine uses a 6-phase scoring system to rank Coles and Woolworths based on your purchase frequency, catalog prices, weekly half-price specials, and travel distances.
               </p>
             </div>
           </div>
@@ -299,12 +267,8 @@ function LandingPage({ user, onNavigate, onLogout }) {
             Sign Up Now Free <ArrowRight size={18} />
           </button>
         </section>
-
-        {/* Footer */}
-        <footer className="footer">
-          <p>© {new Date().getFullYear()} Docket Grocery Optimizer. Built with React, C#, and Python.</p>
-        </footer>
       </div>
+      <Footer />
     </div>
   );
 }

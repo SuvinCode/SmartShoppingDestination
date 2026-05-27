@@ -89,28 +89,6 @@ namespace backend.Models
         }
     }
 
-    /// <summary>
-    /// Split-shop suggestion: buy top-N items at one store, the rest at another.
-    /// </summary>
-    public class SplitShopSuggestion
-    {
-        public string PrimaryStore { get; private set; } = "";
-        public string SecondaryStore { get; private set; } = "";
-        public List<string> PrimaryItems { get; private set; } = new();
-        public decimal ExtraSaving { get; private set; }
-        public string Narrative { get; private set; } = "";
-
-        private SplitShopSuggestion() { }
-
-        public SplitShopSuggestion(string primaryStore, string secondaryStore, List<string> primaryItems, decimal extraSaving)
-        {
-            PrimaryStore = primaryStore ?? throw new ArgumentNullException(nameof(primaryStore));
-            SecondaryStore = secondaryStore ?? throw new ArgumentNullException(nameof(secondaryStore));
-            PrimaryItems = primaryItems ?? new();
-            ExtraSaving = Math.Max(0, extraSaving);
-            Narrative = $"Buy your top {PrimaryItems.Count} item(s) at {PrimaryStore} and everything else at {SecondaryStore} to save an additional ${ExtraSaving:F2}.";
-        }
-    }
 
     /// <summary>
     /// Per-item price detail at a specific store.

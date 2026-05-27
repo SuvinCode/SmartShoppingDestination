@@ -61,3 +61,4 @@
 /home/suvin/Desktop/GitHub/SmartShoppingDestination/backend/obj/Debug/net8.0/backend.pdb
 /home/suvin/Desktop/GitHub/SmartShoppingDestination/backend/obj/Debug/net8.0/backend.genruntimeconfig.cache
 /home/suvin/Desktop/GitHub/SmartShoppingDestination/backend/obj/Debug/net8.0/ref/backend.dll
+/home/suvin/Desktop/GitHub/SmartShoppingDestination/backend/bin/Debug/net8.0/catalog_seed.json
