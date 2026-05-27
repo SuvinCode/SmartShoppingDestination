@@ -10,6 +10,6 @@ namespace backend.Services
         /// <summary>
         /// Runs all 6 phases for the given user and returns the personalised top-5 store list.
         /// </summary>
-        StoreRecommendationResult GetTopStores(int userId, UserPreferences prefs);
+        StoreRecommendationResult? GetTopStores(int userId, UserPreferences prefs);
     }
 }

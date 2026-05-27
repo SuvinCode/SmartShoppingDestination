@@ -80,7 +80,7 @@ export default function ComparisonTab({
           <RefreshCw size={32} style={{ animation: 'spin 1s linear infinite' }} />
           <p style={{ marginTop: '12px' }}>Running store analysis…</p>
         </div>
-      ) : storeRecommendations ? (
+      ) : (storeRecommendations && storeRecommendations.productRankings && storeRecommendations.productRankings.length > 0) ? (
         <div className="recommendations-tab">
 
           {/* Trade-Off Banner */}

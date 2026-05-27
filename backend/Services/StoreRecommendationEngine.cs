@@ -79,8 +79,17 @@ namespace backend.Services
             _context = context;
         }
 
-        public StoreRecommendationResult GetTopStores(int userId, UserPreferences prefs)
+        public StoreRecommendationResult? GetTopStores(int userId, UserPreferences prefs)
         {
+            var history = _context.ShoppingListItems
+                .Where(i => i.UserId == userId && i.IsCompleted)
+                .ToList();
+
+            if (!history.Any())
+            {
+                return null;
+            }
+
             // ── Phase 0: Region Store Filter (Limited to Coles and Woolworths as requested) ──
             string region = prefs.Region ?? "Melbourne";
             var availableStores = GetStoresForRegion(region);
@@ -313,15 +322,7 @@ namespace backend.Services
 
             if (!history.Any())
             {
-                // Fallback: use a generic list if no history exists
-                return new List<RankedProduct>
-                {
-                    new("Full Cream Milk 2L", 12, 1),
-                    new("White Bread 650g", 11, 2),
-                    new("Chicken Breast 500g", 3, 3),
-                    new("Cheese Block 500g", 3, 3),
-                    new("Eggs 12pk", 2, 5)
-                };
+                return new List<RankedProduct>();
             }
 
             var grouped = history

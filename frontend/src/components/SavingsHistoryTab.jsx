@@ -1,6 +1,19 @@
 import React from 'react';
+import { TrendingUp } from 'lucide-react';
 
-export default function SavingsHistoryTab({ savingsStats }) {
+export default function SavingsHistoryTab({ savingsStats, user, hasScannedReceipt }) {
+  const isDemo = user?.username?.toLowerCase() === 'demo';
+  if (isDemo && !hasScannedReceipt) {
+    return (
+      <div className="view-section animate-fade-in">
+        <div className="glass-panel" style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>
+          <TrendingUp size={48} style={{ marginBottom: '16px', opacity: 0.5, color: 'var(--primary)' }} />
+          <h3 style={{ color: '#fff', fontSize: '1.3rem', marginBottom: '8px' }}>No Savings History Yet</h3>
+          <p>Upload and scan your receipts to start tracking your cumulative savings and analytics.</p>
+        </div>
+      </div>
+    );
+  }
   // SVG Chart Render Helper (Zero Dependency Charting)
   const renderSavingsChart = () => {
     const history = savingsStats.history;

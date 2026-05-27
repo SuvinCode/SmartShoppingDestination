@@ -51,6 +51,7 @@ function DashboardPage({ user, onLogout }) {
   // State for store recommendations (6-phase engine)
   const [storeRecommendations, setStoreRecommendations] = useState(null);
   const [recommendationsLoading, setRecommendationsLoading] = useState(false);
+  const [hasScannedReceipt, setHasScannedReceipt] = useState(false);
 
   // State for notifications
   const [notifications, setNotifications] = useState([]);
@@ -140,12 +141,12 @@ function DashboardPage({ user, onLogout }) {
   }, []);
 
   useEffect(() => {
-    if (shoppingList.length > 0) {
+    if (shoppingList.length > 0 && !(user?.username?.toLowerCase() === 'demo' && !hasScannedReceipt)) {
       runComparison();
     } else {
       setComparison(null);
     }
-  }, [shoppingList, preferences]);
+  }, [shoppingList, preferences, hasScannedReceipt]);
 
   // Show dynamic toast helper
   const showToast = (message, type = 'success') => {
@@ -250,46 +251,56 @@ function DashboardPage({ user, onLogout }) {
   };
 
   // loadStoreRecommendations — Phase 1-6 store ranking
-  const loadStoreRecommendations = async () => {
+  const loadStoreRecommendations = async (forceMock = false) => {
     setRecommendationsLoading(true);
     try {
       const response = await fetch(`${API_URL}/recommendations?userId=${user.userId}`);
       if (!response.ok) throw new Error();
       const data = await response.json();
       setStoreRecommendations(data);
+      if (data && data.productRankings && data.productRankings.length > 0) {
+        setHasScannedReceipt(true);
+      } else {
+        setHasScannedReceipt(false);
+      }
     } catch {
       // Offline mock: simulates realistic output of the 6-phase engine
-      setStoreRecommendations({
-        productRankings: [
-          { productName: 'Full Cream Milk 2L', occurrences: 12, rank: 1, rankWeight: 1.0 },
-          { productName: 'White Bread 650g', occurrences: 11, rank: 2, rankWeight: 0.5 },
-          { productName: 'Chicken Breast 500g', occurrences: 9, rank: 3, rankWeight: 0.33 },
-          { productName: 'Cheese Block 500g', occurrences: 9, rank: 3, rankWeight: 0.33 },
-          { productName: 'Eggs 12pk', occurrences: 7, rank: 5, rankWeight: 0.2 },
-        ],
-        topByWeightedSavings: [
-          { storeName: 'Coles', weightedScore: 1.33, estimatedWeeklySaving: 18.00, winningProducts: ['Chicken Breast 500g', 'Western Star Butter Block Salted'], specialDiscounts: ['Chicken Breast 500g'], savingsSummary: 'Strong on your Rank 3 items' },
-          { storeName: 'Woolworths', weightedScore: 0.70, estimatedWeeklySaving: 15.00, winningProducts: ['Bega Tasty Cheese Block', 'Eggs 12pk'], specialDiscounts: ['Bega Tasty Cheese Block'], savingsSummary: 'Best for your cheese and eggs' },
-          { storeName: 'Aldi', weightedScore: 1.20, estimatedWeeklySaving: 20.00, winningProducts: ['Full Cream Milk', 'White Toast Bread'], specialDiscounts: [], savingsSummary: 'Cheapest milk and bread' },
-          { storeName: 'IGA', weightedScore: 0.40, estimatedWeeklySaving: 8.50, winningProducts: ['Eggs 12pk'], specialDiscounts: ['Eggs 12pk'], savingsSummary: 'Convenient but slightly more expensive overall' },
-          { storeName: 'Costco', weightedScore: 0.95, estimatedWeeklySaving: 25.00, winningProducts: ['Bega Tasty Cheese Block', 'Full Cream Milk'], specialDiscounts: ['Bega Tasty Cheese Block'], savingsSummary: 'Great bulk savings if you travel' }
-        ],
-        topByProximity: [
-          { storeName: 'Woolworths', distanceKm: 0.8, driveMinutes: 2, proximitySummary: '0.8 km, ~2 min drive' },
-          { storeName: 'Coles', distanceKm: 1.2, driveMinutes: 2, proximitySummary: '1.2 km, ~2 min drive' },
-          { storeName: 'IGA', distanceKm: 2.1, driveMinutes: 4, proximitySummary: '2.1 km, ~4 min drive' },
-          { storeName: 'Aldi', distanceKm: 4.6, driveMinutes: 9, proximitySummary: '4.6 km, ~9 min drive' },
-          { storeName: 'Costco', distanceKm: 18.0, driveMinutes: 25, proximitySummary: '18.0 km, ~25 min drive' }
-        ],
-        tradeOffNarrative: 'Aldi saves you the most ($20.00) but is 4.6 km away. Woolworths saves $5.00 less but is only 0.8 km from you.',
-        itemComparisons: [
-          { productName: 'Full Cream Milk 2L', cheapestStore: 'Aldi', storePrices: { 'Coles': { price: 3.10, isSpecial: false, specialDetails: '', packageSize: '2L' }, 'Woolworths': { price: 3.10, isSpecial: false, specialDetails: '', packageSize: '2L' }, 'Aldi': { price: 2.49, isSpecial: false, specialDetails: '', packageSize: '2L' }, 'IGA': { price: 3.40, isSpecial: false, specialDetails: '', packageSize: '2L' }, 'Costco': { price: 4.99, isSpecial: false, specialDetails: '', packageSize: '3L' } } },
-          { productName: 'White Bread 650g', cheapestStore: 'Aldi', storePrices: { 'Coles': { price: 2.70, isSpecial: false, specialDetails: '', packageSize: '650g' }, 'Woolworths': { price: 2.70, isSpecial: false, specialDetails: '', packageSize: '650g' }, 'Aldi': { price: 1.99, isSpecial: false, specialDetails: '', packageSize: '650g' }, 'IGA': { price: 2.90, isSpecial: true, specialDetails: 'Save $0.60', packageSize: '650g' }, 'Costco': { price: 4.49, isSpecial: false, specialDetails: '', packageSize: '1300g' } } },
-          { productName: 'Cheese Block 500g', cheapestStore: 'Aldi', storePrices: { 'Coles': { price: 8.50, isSpecial: true, specialDetails: 'Save $1.00', packageSize: '500g' }, 'Woolworths': { price: 9.50, isSpecial: false, specialDetails: '', packageSize: '500g' }, 'Aldi': { price: 5.99, isSpecial: false, specialDetails: '', packageSize: '500g' }, 'IGA': { price: 8.99, isSpecial: false, specialDetails: '', packageSize: '500g' }, 'Costco': { price: 12.99, isSpecial: false, specialDetails: '', packageSize: '1kg' } } },
-          { productName: 'Chocolate Block 180g', cheapestStore: 'Aldi', storePrices: { 'Coles': { price: 6.00, isSpecial: false, specialDetails: '', packageSize: '180g' }, 'Woolworths': { price: 3.00, isSpecial: true, specialDetails: '1/2 Price', packageSize: '180g' }, 'Aldi': { price: 1.79, isSpecial: false, specialDetails: '', packageSize: '200g' }, 'IGA': { price: 5.50, isSpecial: true, specialDetails: 'Save $0.50', packageSize: '180g' } } },
-          { productName: 'Bananas 1kg', cheapestStore: 'Aldi', storePrices: { 'Coles': { price: 3.90, isSpecial: false, specialDetails: '', packageSize: '1kg' }, 'Woolworths': { price: 3.90, isSpecial: false, specialDetails: '', packageSize: '1kg' }, 'Aldi': { price: 3.49, isSpecial: false, specialDetails: '', packageSize: '1kg' }, 'IGA': { price: 4.00, isSpecial: false, specialDetails: '', packageSize: '1kg' } } }
-        ]
-      });
+      if (forceMock || hasScannedReceipt || scannedReceipts.length > 0) {
+        setHasScannedReceipt(true);
+        setStoreRecommendations({
+          productRankings: [
+            { productName: 'Full Cream Milk 2L', occurrences: 12, rank: 1, rankWeight: 1.0 },
+            { productName: 'White Bread 650g', occurrences: 11, rank: 2, rankWeight: 0.5 },
+            { productName: 'Chicken Breast 500g', occurrences: 9, rank: 3, rankWeight: 0.33 },
+            { productName: 'Cheese Block 500g', occurrences: 9, rank: 3, rankWeight: 0.33 },
+            { productName: 'Eggs 12pk', occurrences: 7, rank: 5, rankWeight: 0.2 },
+          ],
+          topByWeightedSavings: [
+            { storeName: 'Coles', weightedScore: 1.33, estimatedWeeklySaving: 18.00, winningProducts: ['Chicken Breast 500g', 'Western Star Butter Block Salted'], specialDiscounts: ['Chicken Breast 500g'], savingsSummary: 'Strong on your Rank 3 items' },
+            { storeName: 'Woolworths', weightedScore: 0.70, estimatedWeeklySaving: 15.00, winningProducts: ['Bega Tasty Cheese Block', 'Eggs 12pk'], specialDiscounts: ['Bega Tasty Cheese Block'], savingsSummary: 'Best for your cheese and eggs' },
+            { storeName: 'Aldi', weightedScore: 1.20, estimatedWeeklySaving: 20.00, winningProducts: ['Full Cream Milk', 'White Toast Bread'], specialDiscounts: [], savingsSummary: 'Cheapest milk and bread' },
+            { storeName: 'IGA', weightedScore: 0.40, estimatedWeeklySaving: 8.50, winningProducts: ['Eggs 12pk'], specialDiscounts: ['Eggs 12pk'], savingsSummary: 'Convenient but slightly more expensive overall' },
+            { storeName: 'Costco', weightedScore: 0.95, estimatedWeeklySaving: 25.00, winningProducts: ['Bega Tasty Cheese Block', 'Full Cream Milk'], specialDiscounts: ['Bega Tasty Cheese Block'], savingsSummary: 'Great bulk savings if you travel' }
+          ],
+          topByProximity: [
+            { storeName: 'Woolworths', distanceKm: 0.8, driveMinutes: 2, proximitySummary: '0.8 km, ~2 min drive' },
+            { storeName: 'Coles', distanceKm: 1.2, driveMinutes: 2, proximitySummary: '1.2 km, ~2 min drive' },
+            { storeName: 'IGA', distanceKm: 2.1, driveMinutes: 4, proximitySummary: '2.1 km, ~4 min drive' },
+            { storeName: 'Aldi', distanceKm: 4.6, driveMinutes: 9, proximitySummary: '4.6 km, ~9 min drive' },
+            { storeName: 'Costco', distanceKm: 18.0, driveMinutes: 25, proximitySummary: '18.0 km, ~25 min drive' }
+          ],
+          tradeOffNarrative: 'Aldi saves you the most ($20.00) but is 4.6 km away. Woolworths saves $5.00 less but is only 0.8 km from you.',
+          itemComparisons: [
+            { productName: 'Full Cream Milk 2L', cheapestStore: 'Aldi', storePrices: { 'Coles': { price: 3.10, isSpecial: false, specialDetails: '', packageSize: '2L' }, 'Woolworths': { price: 3.10, isSpecial: false, specialDetails: '', packageSize: '2L' }, 'Aldi': { price: 2.49, isSpecial: false, specialDetails: '', packageSize: '2L' }, 'IGA': { price: 3.40, isSpecial: false, specialDetails: '', packageSize: '2L' }, 'Costco': { price: 4.99, isSpecial: false, specialDetails: '', packageSize: '3L' } } },
+            { productName: 'White Bread 650g', cheapestStore: 'Aldi', storePrices: { 'Coles': { price: 2.70, isSpecial: false, specialDetails: '', packageSize: '650g' }, 'Woolworths': { price: 2.70, isSpecial: false, specialDetails: '', packageSize: '650g' }, 'Aldi': { price: 1.99, isSpecial: false, specialDetails: '', packageSize: '650g' }, 'IGA': { price: 2.90, isSpecial: true, specialDetails: 'Save $0.60', packageSize: '650g' }, 'Costco': { price: 4.49, isSpecial: false, specialDetails: '', packageSize: '1300g' } } },
+            { productName: 'Cheese Block 500g', cheapestStore: 'Aldi', storePrices: { 'Coles': { price: 8.50, isSpecial: true, specialDetails: 'Save $1.00', packageSize: '500g' }, 'Woolworths': { price: 9.50, isSpecial: false, specialDetails: '', packageSize: '500g' }, 'Aldi': { price: 5.99, isSpecial: false, specialDetails: '', packageSize: '500g' }, 'IGA': { price: 8.99, isSpecial: false, specialDetails: '', packageSize: '500g' }, 'Costco': { price: 12.99, isSpecial: false, specialDetails: '', packageSize: '1kg' } } },
+            { productName: 'Chocolate Block 180g', cheapestStore: 'Aldi', storePrices: { 'Coles': { price: 6.00, isSpecial: false, specialDetails: '', packageSize: '180g' }, 'Woolworths': { price: 3.00, isSpecial: true, specialDetails: '1/2 Price', packageSize: '180g' }, 'Aldi': { price: 1.79, isSpecial: false, specialDetails: '', packageSize: '200g' }, 'IGA': { price: 5.50, isSpecial: true, specialDetails: 'Save $0.50', packageSize: '180g' } } },
+            { productName: 'Bananas 1kg', cheapestStore: 'Aldi', storePrices: { 'Coles': { price: 3.90, isSpecial: false, specialDetails: '', packageSize: '1kg' }, 'Woolworths': { price: 3.90, isSpecial: false, specialDetails: '', packageSize: '1kg' }, 'Aldi': { price: 3.49, isSpecial: false, specialDetails: '', packageSize: '1kg' }, 'IGA': { price: 4.00, isSpecial: false, specialDetails: '', packageSize: '1kg' } } }
+          ]
+        });
+      } else {
+        setStoreRecommendations(null);
+      }
     } finally {
       setRecommendationsLoading(false);
     }
@@ -419,6 +430,10 @@ function DashboardPage({ user, onLogout }) {
 
   // 8. Run comparison engine calculations
   const runComparison = async () => {
+    if (user?.username?.toLowerCase() === 'demo' && !hasScannedReceipt) {
+      setComparison(null);
+      return;
+    }
     try {
       const response = await fetch(`${API_URL}/lists/compare?userId=${user.userId}`, { method: 'POST' });
       if (!response.ok) throw new Error();
@@ -589,7 +604,8 @@ function DashboardPage({ user, onLogout }) {
     }
 
     setScannedReceipts(prev => [...prev, ...newReceipts]);
-    await loadStoreRecommendations();
+    setHasScannedReceipt(true);
+    await loadStoreRecommendations(true);
     setOcrLoading(false);
     setUploadedFiles([]);
     showToast(`Successfully processed ${successCount} receipt${successCount !== 1 ? 's' : ''} as purchase history.`);
@@ -706,6 +722,8 @@ function DashboardPage({ user, onLogout }) {
       setShoppingList([]);
       setComparison(null);
       setScannedReceipts([]);
+      setStoreRecommendations(null);
+      setHasScannedReceipt(false);
       
       setSavingsStats({
         cumulativeSavings: 0,
@@ -872,11 +890,17 @@ function DashboardPage({ user, onLogout }) {
             handleCheckout={handleCheckout}
             getStoreDisplayName={getStoreDisplayName}
             getStoreAddress={getStoreAddress}
+            user={user}
+            hasScannedReceipt={hasScannedReceipt}
           />
         )}
 
         {activeTab === 'analytics' && (
-          <SavingsHistoryTab savingsStats={savingsStats} />
+          <SavingsHistoryTab 
+            savingsStats={savingsStats} 
+            user={user}
+            hasScannedReceipt={hasScannedReceipt}
+          />
         )}
 
         {activeTab === 'recommendations' && (

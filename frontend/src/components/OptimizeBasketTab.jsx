@@ -32,7 +32,9 @@ export default function OptimizeBasketTab({
   handleToggleLoyalty,
   handleCheckout,
   getStoreDisplayName,
-  getStoreAddress
+  getStoreAddress,
+  user,
+  hasScannedReceipt
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [autocompleteResults, setAutocompleteResults] = useState([]);
@@ -142,9 +144,11 @@ export default function OptimizeBasketTab({
   };
 
   const hasItems = shoppingList.length > 0;
+  const isDemo = user?.username?.toLowerCase() === 'demo';
+  const showComparisonPanel = hasItems && !(isDemo && !hasScannedReceipt);
 
   return (
-    <div className="view-section compare-grid" style={!hasItems ? { gridTemplateColumns: '1fr' } : {}}>
+    <div className="view-section compare-grid" style={!showComparisonPanel ? { gridTemplateColumns: '1fr' } : {}}>
       {/* LEFT COLUMN: List Builder Wrapper */}
       <div className="left-column-wrapper animate-slide-up" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         <div className="glass-panel builder-card" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -319,7 +323,7 @@ export default function OptimizeBasketTab({
       </div>
 
       {/* RIGHT COLUMN: Comparison Engine Panel */}
-      {hasItems && (
+      {showComparisonPanel && (
         <div className="comparison-panel animate-slide-up">
           {comparison ? (
             <>
