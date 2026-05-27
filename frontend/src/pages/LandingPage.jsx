@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import './LandingPage.css';
 import { 
   ScanLine, 
@@ -10,13 +11,20 @@ import {
   ArrowRight,
   ShieldCheck,
   Zap,
-  Receipt
+  Receipt,
+  UserPlus,
+  UploadCloud,
+  ListPlus,
+  Sliders,
+  Navigation,
+  Sun,
+  Moon
 } from 'lucide-react';
 
 import Logo from '../components/Logo';
 import Footer from '../components/Footer';
 
-function LandingPage({ user, onNavigate, onLogout }) {
+function LandingPage({ user, onNavigate, onLogout, onDemoLogin, theme, setTheme }) {
   // Interactive Demo State
   const [selectedItems, setSelectedItems] = useState([1, 2, 3]); // IDs of checked items
 
@@ -59,86 +67,259 @@ function LandingPage({ user, onNavigate, onLogout }) {
     }
   }
 
+  // Animation Variants
+  const navContainerVariants = {
+    hidden: { opacity: 0, y: -20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        type: 'spring',
+        stiffness: 80,
+        damping: 15,
+        staggerChildren: 0.08,
+        delayChildren: 0.1
+      }
+    }
+  };
+
+  const navItemVariants = {
+    hidden: { opacity: 0, y: -10 },
+    visible: { opacity: 1, y: 0 }
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.12,
+        delayChildren: 0.2
+      }
+    }
+  };
+
+  const fadeUpVariants = {
+    hidden: { opacity: 0, y: 25 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { type: 'spring', stiffness: 90, damping: 14 }
+    }
+  };
+
+  const gridVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const cardVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { type: 'spring', stiffness: 80, damping: 15 }
+    }
+  };
+
   return (
     <div className="landing-container">
       <div className="container">
         {/* Navbar */}
-        <header className="navbar">
-          <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <motion.header 
+          className="navbar"
+          variants={navContainerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <motion.div 
+            className="logo" 
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+            variants={navItemVariants}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.98 }}
+          >
             <Logo size={28} />
             <span>Docket</span>
-          </div>
+          </motion.div>
           
           <ul className="nav-links">
-            <li><a href="#features">Features</a></li>
-            <li><a href="#demo">Try Demo</a></li>
-            <li><a href="https://www.coles.com.au" target="_blank" rel="noreferrer">Coles Catalog</a></li>
-            <li><a href="https://www.woolworths.com.au" target="_blank" rel="noreferrer">Woolies Catalog</a></li>
+            <motion.li variants={navItemVariants}>
+              <motion.a href="#features" whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>Features</motion.a>
+            </motion.li>
+            <motion.li variants={navItemVariants}>
+              <motion.a href="#how-to-use" whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>How to Use</motion.a>
+            </motion.li>
+            <motion.li variants={navItemVariants}>
+              <motion.a href="#" onClick={(e) => { e.preventDefault(); onDemoLogin(); }} whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>Try Demo</motion.a>
+            </motion.li>
+            <motion.li variants={navItemVariants}>
+              <motion.a href="https://www.coles.com.au" target="_blank" rel="noreferrer" whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>Coles Catalog</motion.a>
+            </motion.li>
+            <motion.li variants={navItemVariants}>
+              <motion.a href="https://www.woolworths.com.au" target="_blank" rel="noreferrer" whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>Woolies Catalog</motion.a>
+            </motion.li>
           </ul>
 
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <motion.div className="navbar-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center' }} variants={navItemVariants}>
             {user ? (
               <>
-                <button className="btn btn-secondary" onClick={() => onNavigate('dashboard')}>
+                <motion.button 
+                  className="btn btn-secondary" 
+                  onClick={() => onNavigate('dashboard')}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
                   Go to Dashboard
-                </button>
-                <button className="btn btn-secondary" onClick={onLogout}>
+                </motion.button>
+                <motion.button 
+                  className="btn btn-secondary" 
+                  onClick={onLogout}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
                   Logout ({user.username})
-                </button>
+                </motion.button>
               </>
             ) : (
               <>
-                <button className="btn btn-secondary" onClick={() => onNavigate('login')}>
+                <motion.button 
+                  className="btn btn-secondary btn-signin" 
+                  onClick={() => onNavigate('login')}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
                   Sign In
-                </button>
-                <button className="btn btn-primary" onClick={() => onNavigate('signup')}>
+                </motion.button>
+                <motion.button 
+                  className="btn btn-primary" 
+                  onClick={() => onNavigate('signup')}
+                  whileHover={{ scale: 1.05, boxShadow: "0 4px 14px rgba(89, 165, 232, 0.3)" }}
+                  whileTap={{ scale: 0.95 }}
+                >
                   Get Started
-                </button>
+                </motion.button>
               </>
             )}
-          </div>
-        </header>
+
+            {/* Dark mode toggle */}
+            <motion.button 
+              className="theme-toggle-btn"
+              onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+              whileHover={{ scale: 1.1, rotate: 12, backgroundColor: 'rgba(89, 165, 232, 0.15)' }}
+              whileTap={{ scale: 0.9 }}
+              title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-charcoal)',
+                cursor: 'pointer',
+                padding: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '50%',
+                backgroundColor: 'var(--divider)',
+                width: '38px',
+                height: '38px',
+                marginLeft: '6px',
+                transition: 'background-color var(--transition-fast)'
+              }}
+            >
+              {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+            </motion.button>
+          </motion.div>
+        </motion.header>
 
         {/* Hero Section */}
-        <section className="hero">
-          <div className="hero-tag">
+        <motion.section 
+          className="hero"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <motion.div 
+            variants={fadeUpVariants}
+            className="hero-tag"
+          >
             <span className="hero-tag-dot"></span>
             <span>Australian Grocery Price Optimizer</span>
-          </div>
-          <h1 className="hero-title text-gradient">
+          </motion.div>
+          <motion.h1 
+            variants={fadeUpVariants}
+            className="hero-title text-gradient"
+          >
             Stop Overpaying on Groceries.<br />
-            Let AI Optimize Your Basket.
-          </h1>
-          <p className="hero-subtitle">
+            Optimize Your Shopping Efficiently.
+          </motion.h1>
+          <motion.p 
+            variants={fadeUpVariants}
+            className="hero-subtitle"
+          >
             Docket automatically compares prices between Coles and Woolworths, indexes weekly specials, extracts receipt data, and recommends the cheapest store to maximize your weekly savings.
-          </p>
-          <div className="hero-ctas">
+          </motion.p>
+          <motion.div 
+            variants={fadeUpVariants}
+            className="hero-ctas"
+          >
             {user ? (
-              <button className="btn btn-primary btn-lg" onClick={() => onNavigate('dashboard')}>
-                Enter Dashboard <ArrowRight size={18} />
-              </button>
+              <motion.button 
+                className="btn btn-primary btn-lg" 
+                onClick={() => onNavigate('dashboard')}
+                whileHover={{ scale: 1.05, boxShadow: "0 6px 20px rgba(89, 165, 232, 0.4)" }}
+                whileTap={{ scale: 0.96 }}
+              >
+                Enter Dashboard <ArrowRight size={18} style={{ marginLeft: '4px' }} />
+              </motion.button>
             ) : (
               <>
-                <button className="btn btn-primary btn-lg" onClick={() => onNavigate('signup')}>
-                  Create Free Account <ArrowRight size={18} />
-                </button>
-                <button className="btn btn-secondary btn-lg" onClick={() => {
-                  // Pre-fill login credentials or login with demo
-                  onNavigate('login');
-                }}>
+                <motion.button 
+                  className="btn btn-primary btn-lg" 
+                  onClick={() => onNavigate('signup')}
+                  whileHover={{ scale: 1.05, boxShadow: "0 6px 20px rgba(89, 165, 232, 0.4)" }}
+                  whileTap={{ scale: 0.96 }}
+                >
+                  Create Free Account <ArrowRight size={18} style={{ marginLeft: '4px' }} />
+                </motion.button>
+                <motion.button 
+                  className="btn btn-secondary btn-lg" 
+                  onClick={onDemoLogin}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.96 }}
+                >
                   Try Demo Account
-                </button>
+                </motion.button>
               </>
             )}
-          </div>
-        </section>
+          </motion.div>
+        </motion.section>
 
-        {/* Interactive Demo Widget */}
-        <section id="demo" className="demo-section">
+        {/* Interactive Demo Widget with Floating Animation */}
+        <motion.section 
+          id="demo" 
+          className="demo-section"
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.7, type: 'spring', stiffness: 60 }}
+        >
           <h2 className="demo-title text-gradient">Compare Prices in Real-Time</h2>
           <p className="demo-subtitle">Select items to simulate Coles vs. Woolworths checkout baskets</p>
           
-          <div className="demo-grid">
+          <motion.div 
+            className="demo-grid"
+            animate={{ y: [0, -6, 0] }}
+            transition={{
+              duration: 6,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          >
             {/* Left Card: Items */}
             <div className="glass-panel demo-card">
               <div className="demo-card-title">
@@ -148,7 +329,12 @@ function LandingPage({ user, onNavigate, onLogout }) {
               
               <div className="demo-items-list">
                 {demoCatalog.map(item => (
-                  <div key={item.id} className="demo-item">
+                  <motion.div 
+                    key={item.id} 
+                    className="demo-item"
+                    whileHover={{ x: 4, backgroundColor: 'rgba(89, 165, 232, 0.05)' }}
+                    transition={{ duration: 0.2 }}
+                  >
                     <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                       <input 
                         type="checkbox" 
@@ -169,7 +355,7 @@ function LandingPage({ user, onNavigate, onLogout }) {
                         C: ${item.colesPrice.toFixed(2)} | W: ${item.wooliesPrice.toFixed(2)}
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
@@ -206,16 +392,26 @@ function LandingPage({ user, onNavigate, onLogout }) {
                 </div>
               )}
             </div>
-          </div>
-        </section>
+          </motion.div>
+        </motion.section>
 
         {/* Features Section */}
         <section id="features" className="features-section">
           <h2 className="features-title text-gradient">Optimized Grocery Intelligence</h2>
           <p className="features-subtitle">Designed to remove input friction and maximize household budgets</p>
           
-          <div className="features-grid">
-            <div className="glass-panel feature-item-card">
+          <motion.div 
+            className="features-grid"
+            variants={gridVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+          >
+            <motion.div 
+              className="glass-panel feature-item-card"
+              variants={cardVariants}
+              whileHover={{ y: -8, boxShadow: "0 12px 24px rgba(89, 165, 232, 0.12)" }}
+            >
               <div className="feature-icon-wrapper">
                 <ScanLine size={24} />
               </div>
@@ -223,9 +419,13 @@ function LandingPage({ user, onNavigate, onLogout }) {
               <p className="feature-item-desc">
                 Simply upload your receipt. Our OCR extracts item details, while ML normalizes text (e.g., "WW CHKN BRST" to "Chicken Breast") and builds your personalized shopping profile.
               </p>
-            </div>
+            </motion.div>
 
-            <div className="glass-panel feature-item-card">
+            <motion.div 
+              className="glass-panel feature-item-card"
+              variants={cardVariants}
+              whileHover={{ y: -8, boxShadow: "0 12px 24px rgba(89, 165, 232, 0.12)" }}
+            >
               <div className="feature-icon-wrapper">
                 <TrendingUp size={24} />
               </div>
@@ -233,9 +433,13 @@ function LandingPage({ user, onNavigate, onLogout }) {
               <p className="feature-item-desc">
                 Compares weekly Coles and Woolworths specials to calculate your personal basket cost. Predicts future specials, detects substitutes, and spots historical pricing patterns.
               </p>
-            </div>
+            </motion.div>
 
-            <div className="glass-panel feature-item-card">
+            <motion.div 
+              className="glass-panel feature-item-card"
+              variants={cardVariants}
+              whileHover={{ y: -8, boxShadow: "0 12px 24px rgba(89, 165, 232, 0.12)" }}
+            >
               <div className="feature-icon-wrapper">
                 <MapPin size={24} />
               </div>
@@ -243,9 +447,13 @@ function LandingPage({ user, onNavigate, onLogout }) {
               <p className="feature-item-desc">
                 Intelligent location detection maps your coordinates or address to local regions (Melbourne, Sydney, Brisbane). Ensures store distance profiles are accurate and relevant to your physical location.
               </p>
-            </div>
+            </motion.div>
 
-            <div className="glass-panel feature-item-card">
+            <motion.div 
+              className="glass-panel feature-item-card"
+              variants={cardVariants}
+              whileHover={{ y: -8, boxShadow: "0 12px 24px rgba(89, 165, 232, 0.12)" }}
+            >
               <div className="feature-icon-wrapper">
                 <TrendingUp size={24} />
               </div>
@@ -253,8 +461,97 @@ function LandingPage({ user, onNavigate, onLogout }) {
               <p className="feature-item-desc">
                 Our recommendation engine uses a 6-phase scoring system to rank Coles and Woolworths based on your purchase frequency, catalog prices, weekly half-price specials, and travel distances.
               </p>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
+        </section>
+
+        {/* How to Use Section */}
+        <section id="how-to-use" className="how-to-use-section">
+          <h2 className="features-title text-gradient">How to Use Docket</h2>
+          <p className="features-subtitle">Get optimized grocery savings in 5 simple steps</p>
+          
+          <motion.div 
+            className="how-to-use-steps"
+            variants={gridVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+          >
+            <motion.div 
+              className="glass-panel step-card"
+              variants={cardVariants}
+              whileHover={{ y: -8, boxShadow: "0 12px 24px rgba(89, 165, 232, 0.12)" }}
+            >
+              <div className="step-badge">Step 1</div>
+              <div className="step-icon-wrapper">
+                <UserPlus size={22} />
+              </div>
+              <h3 className="step-title">Access the Dashboard</h3>
+              <p className="step-desc">
+                Click <strong>Get Started</strong> to create an account, or <strong>Try Demo</strong> in the header to login instantly.
+              </p>
+            </motion.div>
+
+            <motion.div 
+              className="glass-panel step-card"
+              variants={cardVariants}
+              whileHover={{ y: -8, boxShadow: "0 12px 24px rgba(89, 165, 232, 0.12)" }}
+            >
+              <div className="step-badge">Step 2</div>
+              <div className="step-icon-wrapper">
+                <UploadCloud size={22} />
+              </div>
+              <h3 className="step-title">Upload Receipts</h3>
+              <p className="step-desc">
+                Upload grocery receipts in the dashboard. The AI OCR extracts products and builds your profile.
+              </p>
+            </motion.div>
+
+            <motion.div 
+              className="glass-panel step-card"
+              variants={cardVariants}
+              whileHover={{ y: -8, boxShadow: "0 12px 24px rgba(89, 165, 232, 0.12)" }}
+            >
+              <div className="step-badge">Step 3</div>
+              <div className="step-icon-wrapper">
+                <ListPlus size={22} />
+              </div>
+              <h3 className="step-title">Build Shopping List</h3>
+              <p className="step-desc">
+                Search the catalog to add items or select from your personalized purchase history.
+              </p>
+            </motion.div>
+
+            <motion.div 
+              className="glass-panel step-card"
+              variants={cardVariants}
+              whileHover={{ y: -8, boxShadow: "0 12px 24px rgba(89, 165, 232, 0.12)" }}
+            >
+              <div className="step-badge">Step 4</div>
+              <div className="step-icon-wrapper">
+                <Sliders size={22} />
+              </div>
+              <h3 className="step-title">Set Preferences</h3>
+              <p className="step-desc">
+                Input your home address, fuel cost, travel limits, and toggle loyalty memberships.
+              </p>
+            </motion.div>
+
+            <motion.div 
+              className="glass-panel step-card"
+              variants={cardVariants}
+              whileHover={{ y: -8, boxShadow: "0 12px 24px rgba(89, 165, 232, 0.12)" }}
+            >
+              <div className="step-badge">Step 5</div>
+              <div className="step-icon-wrapper">
+                <Navigation size={22} />
+              </div>
+              <h3 className="step-title">Optimize & Save</h3>
+              <p className="step-desc">
+                Let Docket find the cheapest store basket. Click the Google Maps route and save!
+              </p>
+            </motion.div>
+          </motion.div>
         </section>
 
         {/* Call to action */}
@@ -263,9 +560,14 @@ function LandingPage({ user, onNavigate, onLogout }) {
           <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', maxWidth: '600px', margin: '0 auto 32px auto' }}>
             Create an account in 10 seconds, input your shopping list manually or with a receipt upload, and get an optimized route to save.
           </p>
-          <button className="btn btn-primary btn-lg" onClick={() => onNavigate('signup')}>
-            Sign Up Now Free <ArrowRight size={18} />
-          </button>
+          <motion.button 
+            className="btn btn-primary btn-lg" 
+            onClick={() => onNavigate('signup')}
+            whileHover={{ scale: 1.05, boxShadow: "0 6px 20px rgba(89, 165, 232, 0.4)" }}
+            whileTap={{ scale: 0.96 }}
+          >
+            Sign Up Now Free <ArrowRight size={18} style={{ marginLeft: '4px' }} />
+          </motion.button>
         </section>
       </div>
       <Footer />

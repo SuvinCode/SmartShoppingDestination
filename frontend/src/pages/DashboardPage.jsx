@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import './DashboardPage.css';
 import { API_URL } from '../App';
 import { 
@@ -16,8 +17,9 @@ import MySettingsTab from '../components/MySettingsTab';
 import ComparisonTab from '../components/ComparisonTab';
 import Footer from '../components/Footer';
 
-function DashboardPage({ user, onLogout }) {
+function DashboardPage({ user, onLogout, onNavigate, theme, setTheme }) {
   const [activeTab, setActiveTab] = useState('compare'); // 'compare' | 'analytics' | 'settings' | 'recommendations'
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [shoppingList, setShoppingList] = useState([]);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   
@@ -818,26 +820,75 @@ function DashboardPage({ user, onLogout }) {
   };
 
   return (
-    <div className="dashboard-container">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="dashboard-container"
+    >
       {/* Toast Notification */}
-      {toast && (
-        <div className={`toast-msg animate-slide-up`}>
-          <CheckCircle size={18} />
-          <span>{toast.message}</span>
-        </div>
-      )}
+      <AnimatePresence>
+        {toast && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="toast-msg"
+          >
+            <CheckCircle size={18} />
+            <span>{toast.message}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Header */}
       <Header
         user={user}
         onLogout={onLogout}
         setActiveTab={setActiveTab}
-        showNotifications={showNotifications}
-        setShowNotifications={setShowNotifications}
-        unreadCount={unreadCount}
-        notifications={notifications}
-        handleMarkNotificationsRead={handleMarkNotificationsRead}
+        theme={theme}
+        setTheme={setTheme}
+        mobileMenuOpen={mobileMenuOpen}
+        setMobileMenuOpen={setMobileMenuOpen}
       />
+
+      {/* Mobile Navigation Drawer */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="mobile-navigation-drawer"
+            style={{ overflow: 'hidden' }}
+          >
+            <button 
+              className={`mobile-nav-item ${activeTab === 'compare' ? 'active' : ''}`}
+              onClick={() => { setActiveTab('compare'); setMobileMenuOpen(false); }}
+            >
+              <ShoppingBag size={18} /> Optimize Basket
+            </button>
+            <button 
+              className={`mobile-nav-item ${activeTab === 'analytics' ? 'active' : ''}`}
+              onClick={() => { setActiveTab('analytics'); setMobileMenuOpen(false); }}
+            >
+              <TrendingUp size={18} /> Savings History
+            </button>
+            <button 
+              className={`mobile-nav-item ${activeTab === 'recommendations' ? 'active' : ''}`}
+              onClick={() => { setActiveTab('recommendations'); setMobileMenuOpen(false); }}
+            >
+              <GitCompare size={18} /> Comparison
+            </button>
+            <button 
+              className={`mobile-nav-item ${activeTab === 'settings' ? 'active' : ''}`}
+              onClick={() => { setActiveTab('settings'); setMobileMenuOpen(false); }}
+            >
+              <Settings size={18} /> My Settings
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="container dash-main">
         {/* Navigation Tabs */}
@@ -868,64 +919,98 @@ function DashboardPage({ user, onLogout }) {
           </button>
         </nav>
 
-        {/* Tab contents */}
-        {activeTab === 'compare' && (
-          <OptimizeBasketTab
-            shoppingList={shoppingList}
-            comparison={comparison}
-            uploadedFiles={uploadedFiles}
-            ocrLoading={ocrLoading}
-            loading={loading}
-            scannedReceipts={scannedReceipts}
-            storeRecommendations={storeRecommendations}
-            preferences={preferences}
-            handleAddItem={handleAddItem}
-            handleUpdateQty={handleUpdateQty}
-            handleDeleteItem={handleDeleteItem}
-            handleClearList={handleClearList}
-            handleFileChange={handleFileChange}
-            handleRemoveFile={handleRemoveFile}
-            handleScanDocuments={handleScanDocuments}
-            handleToggleLoyalty={handleToggleLoyalty}
-            handleCheckout={handleCheckout}
-            getStoreDisplayName={getStoreDisplayName}
-            getStoreAddress={getStoreAddress}
-            user={user}
-            hasScannedReceipt={hasScannedReceipt}
-          />
-        )}
+        {/* Tab contents with fluid layout transitions */}
+        <AnimatePresence mode="wait">
+          {activeTab === 'compare' && (
+            <motion.div
+              key="compare"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.22, ease: 'easeInOut' }}
+            >
+              <OptimizeBasketTab
+                shoppingList={shoppingList}
+                comparison={comparison}
+                uploadedFiles={uploadedFiles}
+                ocrLoading={ocrLoading}
+                loading={loading}
+                scannedReceipts={scannedReceipts}
+                storeRecommendations={storeRecommendations}
+                preferences={preferences}
+                handleAddItem={handleAddItem}
+                handleUpdateQty={handleUpdateQty}
+                handleDeleteItem={handleDeleteItem}
+                handleClearList={handleClearList}
+                handleFileChange={handleFileChange}
+                handleRemoveFile={handleRemoveFile}
+                handleScanDocuments={handleScanDocuments}
+                handleToggleLoyalty={handleToggleLoyalty}
+                handleCheckout={handleCheckout}
+                getStoreDisplayName={getStoreDisplayName}
+                getStoreAddress={getStoreAddress}
+                user={user}
+                hasScannedReceipt={hasScannedReceipt}
+              />
+            </motion.div>
+          )}
 
-        {activeTab === 'analytics' && (
-          <SavingsHistoryTab 
-            savingsStats={savingsStats} 
-            user={user}
-            hasScannedReceipt={hasScannedReceipt}
-          />
-        )}
+          {activeTab === 'analytics' && (
+            <motion.div
+              key="analytics"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.22, ease: 'easeInOut' }}
+            >
+              <SavingsHistoryTab 
+                savingsStats={savingsStats} 
+                user={user}
+                hasScannedReceipt={hasScannedReceipt}
+              />
+            </motion.div>
+          )}
 
-        {activeTab === 'recommendations' && (
-          <ComparisonTab
-            recommendationsLoading={recommendationsLoading}
-            storeRecommendations={storeRecommendations}
-            loadStoreRecommendations={loadStoreRecommendations}
-            getStoreDisplayName={getStoreDisplayName}
-            getStoreAddress={getStoreAddress}
-            preferences={preferences}
-          />
-        )}
+          {activeTab === 'recommendations' && (
+            <motion.div
+              key="recommendations"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.22, ease: 'easeInOut' }}
+            >
+              <ComparisonTab
+                recommendationsLoading={recommendationsLoading}
+                storeRecommendations={storeRecommendations}
+                loadStoreRecommendations={loadStoreRecommendations}
+                getStoreDisplayName={getStoreDisplayName}
+                getStoreAddress={getStoreAddress}
+                preferences={preferences}
+              />
+            </motion.div>
+          )}
 
-        {activeTab === 'settings' && (
-          <MySettingsTab
-            preferences={preferences}
-            setPreferences={setPreferences}
-            handleSavePreferences={handleSavePreferences}
-            loading={loading}
-            handleResetAccount={handleResetAccount}
-          />
-        )}
+          {activeTab === 'settings' && (
+            <motion.div
+              key="settings"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.22, ease: 'easeInOut' }}
+            >
+              <MySettingsTab
+                preferences={preferences}
+                setPreferences={setPreferences}
+                handleSavePreferences={handleSavePreferences}
+                loading={loading}
+                handleResetAccount={handleResetAccount}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
       <Footer />
-    </div>
+    </motion.div>
   );
 }
 

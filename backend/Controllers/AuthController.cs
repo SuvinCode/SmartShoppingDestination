@@ -77,8 +77,8 @@ namespace backend.Controllers
                         distanceColes: 3.5,
                         distanceWoolies: 2.0,
                         fuelCost: 0.18M,
-                        hasFlybuys: true,
-                        hasRewards: true,
+                        hasFlybuys: false,
+                        hasRewards: false,
                         minSplitSaving: 3.00M,
                         region: "Melbourne"
                     );

@@ -21,7 +21,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "http://127.0.0.1:5173")
+        policy.AllowAnyOrigin()
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
@@ -51,5 +51,5 @@ using (var scope = app.Services.CreateScope())
 app.UseAuthorization();
 app.MapControllers();
 
-// Configure to run on a predictable port (e.g. 5100)
-app.Run("http://127.0.0.1:5100");
+// Configure to run on a predictable port (e.g. 5100) on all network interfaces
+app.Run("http://0.0.0.0:5100");

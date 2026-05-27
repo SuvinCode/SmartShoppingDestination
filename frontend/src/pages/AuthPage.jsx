@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import './AuthPage.css';
 import { API_URL } from '../App';
-import { ArrowLeft, KeyRound, Mail, User, AlertCircle, Sparkles, Receipt } from 'lucide-react';
+import { ArrowLeft, KeyRound, Mail, User, AlertCircle, Sparkles, Receipt, Sun, Moon } from 'lucide-react';
 import Logo from '../components/Logo';
 
-function AuthPage({ isLogin, onNavigate, onLoginSuccess }) {
+function AuthPage({ isLogin, onNavigate, onLoginSuccess, theme, setTheme }) {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,14 +48,18 @@ function AuthPage({ isLogin, onNavigate, onLoginSuccess }) {
       
       // Standalone simulation fallback so Docket can be explored even without running backend services
       if (username.toLowerCase() === 'demo' && password === 'password') {
-        onLoginSuccess({ userId: 1, username: 'demo' });
-      } else if (isLogin) {
-        // For testing, let any login succeed if backend is offline to facilitate easy UI checks!
-        console.log("Mocking successful login for test convenience.");
-        onLoginSuccess({ userId: 99, username: username });
+        const mockUser = { userId: 1, username: 'demo' };
+        onLoginSuccess(mockUser);
+        return;
+      }
+      
+      // Simple local simulation for other mock users to allow standalone testing
+      if (!isLogin) {
+        onLoginSuccess({ userId: Math.floor(Math.random() * 1000) + 10, username });
+        return;
       } else {
-        // Let signup succeed
-        onLoginSuccess({ userId: 99, username: username });
+        onLoginSuccess({ userId: 2, username });
+        return;
       }
     } finally {
       setLoading(false);
@@ -88,13 +93,46 @@ function AuthPage({ isLogin, onNavigate, onLoginSuccess }) {
 
   return (
     <div className="auth-wrapper">
-      <div className="glass-panel auth-card animate-slide-up">
-        {/* Back link */}
-        <div 
-          onClick={() => onNavigate('landing')} 
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.9rem' }}
-        >
-          <ArrowLeft size={16} /> Back to Home
+      <motion.div 
+        layout 
+        initial={{ opacity: 0, scale: 0.95, y: 15 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 200, damping: 18 }}
+        className="glass-panel auth-card"
+      >
+        {/* Back link and theme toggle */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div 
+            onClick={() => onNavigate('landing')} 
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.9rem' }}
+          >
+            <ArrowLeft size={16} /> Back to Home
+          </div>
+          
+          <motion.button 
+            className="theme-toggle-btn"
+            onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+            whileHover={{ scale: 1.1, rotate: 12, backgroundColor: 'rgba(89, 165, 232, 0.15)' }}
+            whileTap={{ scale: 0.9 }}
+            title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--text-charcoal)',
+              cursor: 'pointer',
+              padding: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '50%',
+              backgroundColor: 'var(--divider)',
+              width: '32px',
+              height: '32px',
+              transition: 'background-color var(--transition-fast)'
+            }}
+          >
+            {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+          </motion.button>
         </div>
 
         <div className="auth-header">
@@ -102,20 +140,38 @@ function AuthPage({ isLogin, onNavigate, onLoginSuccess }) {
             <Logo size={28} />
             <span>Docket</span>
           </div>
-          <h2 className="auth-title">
+          <motion.h2 
+            key={isLogin ? 'login-title' : 'signup-title'}
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="auth-title"
+          >
             {isLogin ? 'Welcome Back' : 'Create Account'}
-          </h2>
-          <p className="auth-subtitle">
+          </motion.h2>
+          <motion.p 
+            key={isLogin ? 'login-sub' : 'signup-sub'}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="auth-subtitle"
+          >
             {isLogin ? 'Sign in to optimize your shopping' : 'Start saving on groceries today'}
-          </p>
+          </motion.p>
         </div>
 
-        {error && (
-          <div className="auth-error">
-            <AlertCircle size={18} />
-            <span>{error}</span>
-          </div>
-        )}
+        <AnimatePresence mode="wait">
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10, height: 0 }}
+              animate={{ opacity: 1, y: 0, height: 'auto' }}
+              exit={{ opacity: 0, y: -10, height: 0 }}
+              className="auth-error"
+              style={{ overflow: 'hidden' }}
+            >
+              <AlertCircle size={18} />
+              <span>{error}</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="form-group">
@@ -134,22 +190,31 @@ function AuthPage({ isLogin, onNavigate, onLoginSuccess }) {
             </div>
           </div>
 
-          {!isLogin && (
-            <div className="form-group">
-              <label className="form-label">Email Address (Optional)</label>
-              <div style={{ position: 'relative' }}>
-                <Mail size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                <input 
-                  type="email" 
-                  className="glass-input" 
-                  placeholder="name@docket.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  style={{ paddingLeft: '40px', width: '100%' }}
-                />
-              </div>
-            </div>
-          )}
+          <AnimatePresence initial={false}>
+            {!isLogin && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0, y: -10 }}
+                animate={{ opacity: 1, height: 'auto', y: 0 }}
+                exit={{ opacity: 0, height: 0, y: -10 }}
+                transition={{ duration: 0.25 }}
+                className="form-group"
+                style={{ overflow: 'hidden' }}
+              >
+                <label className="form-label">Email Address (Optional)</label>
+                <div style={{ position: 'relative' }}>
+                  <Mail size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                  <input 
+                    type="email" 
+                    className="glass-input" 
+                    placeholder="name@docket.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    style={{ paddingLeft: '40px', width: '100%' }}
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <div className="form-group">
             <label className="form-label">Password</label>
@@ -196,7 +261,7 @@ function AuthPage({ isLogin, onNavigate, onLoginSuccess }) {
             </button>
           </div>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }
