@@ -4,7 +4,11 @@ import AuthPage from './pages/AuthPage';
 import DashboardPage from './pages/DashboardPage';
 
 const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-export const API_URL = `http://${host}:5100/api`;
+let apiBase = import.meta.env.VITE_API_URL || `http://${host}:5100/api`;
+if (apiBase && !apiBase.endsWith('/api') && !apiBase.endsWith('/api/')) {
+  apiBase = apiBase.endsWith('/') ? `${apiBase}api` : `${apiBase}/api`;
+}
+export const API_URL = apiBase;
 
 function App() {
   const [view, setView] = useState('landing'); // 'landing' | 'login' | 'signup' | 'dashboard'
