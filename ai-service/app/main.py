@@ -15,7 +15,7 @@ class MatchRequest(BaseModel):
     candidates: List[CandidateItem]
     limit: Optional[int] = 5
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 def read_root():
     return {
         "status": "healthy",
