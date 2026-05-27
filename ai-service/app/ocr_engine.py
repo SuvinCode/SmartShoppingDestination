@@ -11,14 +11,21 @@ except ImportError:
 
 
 def preprocess_image(img: Image.Image) -> Image.Image:
-    """Enhance receipt image for better OCR accuracy."""
+    """Enhance receipt image for better OCR accuracy and speed."""
     img = img.convert("L")
     img = ImageOps.autocontrast(img, cutoff=2)
     img = img.filter(ImageFilter.SHARPEN)
     width, height = img.size
-    if width < 800:
-        scale = 800 / width
-        img = img.resize((int(width * scale), int(height * scale)), Image.LANCZOS)
+    
+    # Target width for optimal OCR speed & accuracy is around 1000px.
+    # Downscaling extremely large phone images reduces Tesseract CPU processing time drastically.
+    target_width = 1000
+    if width > target_width:
+        scale = target_width / width
+        img = img.resize((int(width * scale), int(height * scale)), Image.Resampling.LANCZOS if hasattr(Image, 'Resampling') else Image.LANCZOS)
+    elif width < 600:
+        scale = 600 / width
+        img = img.resize((int(width * scale), int(height * scale)), Image.Resampling.LANCZOS if hasattr(Image, 'Resampling') else Image.LANCZOS)
     return img
 
 
