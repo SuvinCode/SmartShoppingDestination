@@ -7,7 +7,8 @@ import {
   Settings, 
   ShoppingBag, 
   CheckCircle,
-  GitCompare
+  GitCompare,
+  Sparkles
 } from 'lucide-react';
 
 import Header from '../components/Header';
@@ -891,6 +892,12 @@ function DashboardPage({ user, onLogout, onNavigate, theme, setTheme }) {
       </AnimatePresence>
 
       <div className="container dash-main">
+        {/* MVP Disclaimer Banner */}
+        <div className="mvp-disclaimer-banner">
+          <Sparkles size={16} className="disclaimer-icon" />
+          <span><strong>MVP Demonstration:</strong> All catalog prices, discounts, and weekly specials are simulated mock data.</span>
+        </div>
+
         {/* Navigation Tabs */}
         <nav className="dash-tabs">
           <button 

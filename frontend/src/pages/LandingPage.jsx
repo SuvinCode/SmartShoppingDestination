@@ -248,7 +248,7 @@ function LandingPage({ user, onNavigate, onLogout, onDemoLogin, theme, setTheme 
             className="hero-tag"
           >
             <span className="hero-tag-dot"></span>
-            <span>Australian Grocery Price Optimizer</span>
+            <span>Australian Grocery Price Optimizer (MVP Demo - Simulated Data)</span>
           </motion.div>
           <motion.h1 
             variants={fadeUpVariants}
@@ -359,7 +359,7 @@ function LandingPage({ user, onNavigate, onLogout, onDemoLogin, theme, setTheme 
                 ))}
               </div>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-                *Specials are simulated from current Coles and Woolworths catalogue deals.
+                *All grocery prices, discounts, and weekly specials are simulated mock data for this MVP demonstration.
               </p>
             </div>
 
