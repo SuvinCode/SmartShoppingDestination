@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using backend.Data;
 
 namespace backend.Controllers
@@ -18,6 +19,7 @@ namespace backend.Controllers
         }
 
         [HttpGet("search")]
+        [OutputCache(PolicyName = "CatalogSearchPolicy")]
         public IActionResult Search([FromQuery] string q)
         {
             if (string.IsNullOrWhiteSpace(q))

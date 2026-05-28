@@ -16,6 +16,27 @@ builder.Services.AddHttpClient<IPythonAIServiceClient, PythonAIServiceClient>();
 builder.Services.AddScoped<IComparisonEngine, ComparisonEngine>();
 builder.Services.AddScoped<IStoreRecommendationEngine, StoreRecommendationEngine>();
 
+// Output Caching — in-memory cache for read-heavy, infrequently changing endpoints.
+// Catalog data and store recommendations don't change between reseeds, so caching
+// them cuts repeated DB round-trips and AI service calls from the frontend.
+builder.Services.AddOutputCache(options =>
+{
+    // Catalog search results: cache per query string, expire after 10 minutes.
+    options.AddPolicy("CatalogSearchPolicy", policy =>
+        policy.Expire(TimeSpan.FromMinutes(10))
+              .SetVaryByQuery("q"));
+
+    // Store recommendations: vary by userId, expire after 5 minutes.
+    options.AddPolicy("RecommendationsPolicy", policy =>
+        policy.Expire(TimeSpan.FromMinutes(5))
+              .SetVaryByQuery("userId"));
+
+    // Dashboard savings stats: vary by userId, expire after 2 minutes.
+    options.AddPolicy("SavingsStatsPolicy", policy =>
+        policy.Expire(TimeSpan.FromMinutes(2))
+              .SetVaryByQuery("userId"));
+});
+
 // Configure CORS for Vite React Frontend
 builder.Services.AddCors(options =>
 {
@@ -31,6 +52,9 @@ var app = builder.Build();
 
 // Enable CORS
 app.UseCors("AllowFrontend");
+
+// Enable output caching middleware (must be before MapControllers)
+app.UseOutputCache();
 
 // Initialize and Seed Database
 using (var scope = app.Services.CreateScope())
@@ -53,3 +77,4 @@ app.MapControllers();
 
 // Configure to run on a predictable port (e.g. 5100) on all network interfaces
 app.Run("http://0.0.0.0:5100");
+

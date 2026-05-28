@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using backend.Data;
 using backend.Models;
 
@@ -19,6 +20,7 @@ namespace backend.Controllers
         }
 
         [HttpGet("savings")]
+        [OutputCache(PolicyName = "SavingsStatsPolicy")]
         public IActionResult GetSavingsStats([FromQuery] int userId)
         {
             var logs = _context.SavingLogs
@@ -54,6 +56,7 @@ namespace backend.Controllers
         }
 
         [HttpGet("notifications")]
+        [OutputCache(Duration = 300)] // 5 minutes — notifications are simulated and rarely change
         public IActionResult GetNotifications([FromQuery] int userId)
         {
             var prefs = _context.UserPreferences.FirstOrDefault(p => p.UserId == userId);

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using backend.Data;
 using backend.Models;
 using backend.Services;
@@ -24,6 +25,7 @@ namespace backend.Controllers
         /// ranked by weighted savings and by proximity, plus a combined trade-off narrative.
         /// </summary>
         [HttpGet]
+        [OutputCache(PolicyName = "RecommendationsPolicy")]
         public IActionResult GetRecommendations([FromQuery] int userId)
         {
             if (userId <= 0)

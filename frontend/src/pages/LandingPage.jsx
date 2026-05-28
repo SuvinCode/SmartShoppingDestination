@@ -158,13 +158,8 @@ function LandingPage({ user, onNavigate, onLogout, onDemoLogin, theme, setTheme 
             <motion.li variants={navItemVariants}>
               <motion.a href="#" onClick={(e) => { e.preventDefault(); onDemoLogin(); }} whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>Try Demo</motion.a>
             </motion.li>
-            <motion.li variants={navItemVariants}>
-              <motion.a href="https://www.coles.com.au" target="_blank" rel="noreferrer" whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>Coles Catalog</motion.a>
-            </motion.li>
-            <motion.li variants={navItemVariants}>
-              <motion.a href="https://www.woolworths.com.au" target="_blank" rel="noreferrer" whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>Woolies Catalog</motion.a>
-            </motion.li>
           </ul>
+
 
           <motion.div className="navbar-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center' }} variants={navItemVariants}>
             {user ? (
