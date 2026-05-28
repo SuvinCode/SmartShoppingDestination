@@ -12,4 +12,7 @@ WORKDIR /app
 COPY --from=build /app/publish .
 EXPOSE 5100
 ENV ASPNETCORE_URLS=http://+:5100
+# Disable file watchers to prevent inotify instance limit crashes on Render
+ENV DOTNET_USE_POLLING_FILE_WATCHER=true
+ENV DOTNET_hostBuilder__reloadConfigOnChange=false
 ENTRYPOINT ["dotnet", "backend.dll"]
