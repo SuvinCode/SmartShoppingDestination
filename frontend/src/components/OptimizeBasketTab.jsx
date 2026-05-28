@@ -152,8 +152,14 @@ export default function OptimizeBasketTab({
       {/* LEFT COLUMN: List Builder Wrapper */}
       <div className="left-column-wrapper animate-slide-up" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         <div className="glass-panel builder-card" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          <h3 style={{ fontSize: '1.1rem', borderBottom: '1px solid var(--border-glass)', paddingBottom: '10px' }}>
-            Build Shopping List
+          <h3 style={{ fontSize: '1.1rem', borderBottom: '1px solid var(--border-glass)', paddingBottom: '10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span style={{ fontWeight: 600 }}>Build Shopping List</span>
+            {preferences?.homeAddress && (
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 400, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <MapPin size={12} style={{ color: 'var(--blue-500)' }} />
+                Location: {preferences.homeAddress} ({preferences.region || 'Melbourne'})
+              </span>
+            )}
           </h3>
           
           {/* Autocomplete Input */}
