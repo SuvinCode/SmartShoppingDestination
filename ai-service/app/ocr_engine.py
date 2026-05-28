@@ -94,7 +94,10 @@ def parse_receipt_text(text: str) -> list:
     lines = text.split("\n")
     items = []
 
-    item_pattern = re.compile(r'^\s*(?:(\d+)\s+)?(.+?)\s+\$?(\d+\.\d{2})\s*$')
+    # Allow an optional trailing tax-code letter (T = taxable, F = GST-free) after
+    # the price, which Coles and Woolworths receipts routinely include.
+    # e.g. "Full Cream Milk 2L      $3.60 T"
+    item_pattern = re.compile(r'^\s*(?:(\d+)\s+)?(.+?)\s+\$?(\d+\.\d{2})\s*[A-Za-z]?\s*$')
 
     skip_keywords = [
         "TOTAL", "SUBTOTAL", "STORE", "ABN", "TRANSACTION", "METHOD",
@@ -142,16 +145,47 @@ def parse_receipt_text(text: str) -> list:
 
 
 def extract_receipt_total(text: str):
-    """Extract receipt total from text."""
+    """
+    Extract the grand total from receipt text.
+
+    Handles common Coles / Woolworths layouts:
+      • "TOTAL                  $52.45"
+      • "TOTAL:                  52.45"
+      • "TOTAL DUE              $52.45"
+      • "TOTAL AMOUNT PAID      $52.45"
+      • "AMOUNT DUE             $52.45"
+      • Total printed on the next line after the word TOTAL
+    Subtotal lines are excluded so we never return an intermediate amount.
+    """
+    # Search for the last (largest) dollar amount near a TOTAL keyword so that
+    # SUBTOTAL doesn't shadow the real TOTAL when it appears first.
     patterns = [
-        re.compile(r'(?:^|\n)\s*TOTAL[:\s]*\$?\s*(\d+\.\d{2})', re.IGNORECASE | re.MULTILINE),
-        re.compile(r'(?:^|\n)\s*Total[:\s]*\$?\s*(\d+\.\d{2})', re.MULTILINE),
+        # "TOTAL … $52.45"  (any words between TOTAL and the price)
+        re.compile(r'\bTOTAL\b[^\n$\d]{0,30}\$?\s*(\d+\.\d{2})', re.IGNORECASE),
+        # "AMOUNT DUE / AMOUNT PAID"
+        re.compile(r'\bAMOUNT\s+(?:DUE|PAID|TENDERED)\b[^\n$\d]{0,20}\$?\s*(\d+\.\d{2})', re.IGNORECASE),
+        # "BALANCE DUE"
+        re.compile(r'\bBALANCE\s+DUE\b[^\n$\d]{0,20}\$?\s*(\d+\.\d{2})', re.IGNORECASE),
+        # Price on the line immediately after TOTAL (no DOTALL — [^\n]* stays on one line)
+        re.compile(r'\bTOTAL\b[^\n]*\n\s*\$?\s*(\d+\.\d{2})', re.IGNORECASE),
     ]
+
+    candidates = []
     for pattern in patterns:
-        match = pattern.search(text)
-        if match:
-            return float(match.group(1))
-    return None
+        for m in pattern.finditer(text):
+            # Grab the full line so we can exclude SUBTOTAL matches
+            line_start = text.rfind('\n', 0, m.start()) + 1
+            line_end = text.find('\n', m.end())
+            line = text[line_start: line_end if line_end != -1 else len(text)]
+            if re.search(r'\bSUBTOTAL\b|\bSUB-TOTAL\b', line, re.IGNORECASE):
+                continue
+            try:
+                candidates.append(float(m.group(1)))
+            except ValueError:
+                pass
+
+    # Return the largest candidate — the grand total is always >= subtotals
+    return max(candidates) if candidates else None
 
 
 def extract_receipt_items(image_bytes: bytes, filename: str = "") -> dict:
@@ -168,10 +202,12 @@ def extract_receipt_items(image_bytes: bytes, filename: str = "") -> dict:
 
         if HAS_TESSERACT:
             processed = preprocess_image(img)
-            raw_text = pytesseract.image_to_string(
-                processed,
-                config='--psm 6 -c "tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789$. /\'-"'
-            )
+            # --psm 6  : assume a single uniform block of text (good for receipts)
+            # --oem 3  : use the LSTM neural-net engine (most accurate)
+            # No character whitelist — the previous whitelist contained embedded
+            # spaces that caused the subprocess argument to be split incorrectly,
+            # which silently broke OCR output on the live server.
+            raw_text = pytesseract.image_to_string(processed, config='--psm 6 --oem 3')
             if raw_text.strip():
                 ocr_succeeded = True
         else:
