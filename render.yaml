@@ -1,13 +1,13 @@
 # render.yaml — Render Blueprint
-# Matches existing Render services: docket-web (frontend) + docket-api (C# backend)
-# Plus docket-ai for the Python OCR service.
+# Live URLs:
+#   Website (frontend): https://docket-web-2cxk.onrender.com
+#   Backend API:        https://docket-api-????.onrender.com  ← check Render dashboard
+#   Python AI:         https://smartshoppingdestination.onrender.com
 
 services:
   # ──────────────────────────────────────────────────────────
   # 1. Python AI Service (FastAPI + Tesseract OCR)
-  #    URL: https://docket-ai.onrender.com
-  #    If you already have this running as 'smartshoppingdestination',
-  #    you can skip this block and just set PYTHON_SERVICE_URL manually.
+  #    URL: https://smartshoppingdestination.onrender.com  (already deployed)
   # ──────────────────────────────────────────────────────────
   - type: web
     name: docket-ai
@@ -22,8 +22,8 @@ services:
 
   # ──────────────────────────────────────────────────────────
   # 2. C# .NET Backend API
-  #    Existing service: docket-api
-  #    URL: https://docket-api.onrender.com
+  #    Service name: docket-api
+  #    URL: https://docket-api-????.onrender.com
   # ──────────────────────────────────────────────────────────
   - type: web
     name: docket-api
@@ -33,11 +33,6 @@ services:
     plan: free
     healthCheckPath: /api/catalog/search?q=milk
     envVars:
-      # Set this to your Python AI service URL in the Render dashboard.
-      # If using the old smartshoppingdestination service:
-      #   PYTHON_SERVICE_URL = https://smartshoppingdestination.onrender.com
-      # If deploying the new docket-ai service above:
-      #   PYTHON_SERVICE_URL = https://docket-ai.onrender.com
       - key: PYTHON_SERVICE_URL
         value: https://smartshoppingdestination.onrender.com
       - key: ASPNETCORE_ENVIRONMENT
@@ -47,8 +42,8 @@ services:
 
   # ──────────────────────────────────────────────────────────
   # 3. React Frontend (Vite static site)
-  #    Existing service: docket-web
-  #    URL: https://docket-web.onrender.com  ← this is your website
+  #    Service name: docket-web
+  #    Live URL: https://docket-web-2cxk.onrender.com  ← the website
   # ──────────────────────────────────────────────────────────
   - type: web
     name: docket-web
@@ -68,6 +63,6 @@ services:
         source: /*
         destination: /index.html
     envVars:
-      # Points the frontend at the C# backend
+      # UPDATE THIS to your actual docket-api URL from Render dashboard
       - key: VITE_API_URL
-        value: https://docket-api.onrender.com
+        value: https://docket-api-????.onrender.com
