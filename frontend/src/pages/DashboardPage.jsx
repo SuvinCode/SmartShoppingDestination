@@ -623,7 +623,9 @@ function DashboardPage({ user, onLogout, onNavigate, theme, setTheme }) {
     const newReceipts = [];
     const isLive = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
 
-    for (let file of uploadedFiles) {
+    for (let i = 0; i < uploadedFiles.length; i++) {
+      let file = uploadedFiles[i];
+      showToast(`Scanning receipt ${i + 1} of ${uploadedFiles.length}...`);
       const formData = new FormData();
       formData.append('file', file);
 
