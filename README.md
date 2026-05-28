@@ -19,28 +19,37 @@ The project features a **C# ASP.NET Core** backend, a **Python FastAPI** AI micr
 
 ## Tech Stack & Architecture
 
+### Service Routing Overview
 ```
-  ┌─────────────────────────────────────────────────────────┐
-  │                   React Frontend (Vite)                 │
-  │                  (Port 5173 - Client UI)                │
-  └────────────────────────────┬────────────────────────────┘
-                               │ HTTP REST
-                               ▼
-  ┌─────────────────────────────────────────────────────────┐
-  │                   C# Web API Backend                    │
-  │                 (Port 5100 - SQLite DB)                 │
-  └────────────────────────────┬────────────────────────────┘
-                               │ HTTP Client
-                               ▼
-  ┌─────────────────────────────────────────────────────────┐
-  │                  Python AI Microservice                 │
-  │               (Port 8000 - OCR & Fuzzy Match)           │
-  └─────────────────────────────────────────────────────────┘
+  ┌─────────────────────────────────────────────────────────────┐
+  │                    React Frontend (Vite)                    │
+  │  - Local: http://localhost:5173                             │
+  │  - Render (Static): https://docket-web-2cxk.onrender.com     │
+  └──────────────────────────────┬──────────────────────────────┘
+                                 │ HTTP REST
+                                 ▼
+  ┌─────────────────────────────────────────────────────────────┐
+  │                     C# Web API Backend                      │
+  │  - Local: http://localhost:5100                             │
+  │  - Render (Docker Web): https://docket-backend-jm71.onrender.com │
+  └──────────────────────────────┬──────────────────────────────┘
+                                 │ HTTP Client
+                                 ▼
+  ┌─────────────────────────────────────────────────────────────┐
+  │                    Python AI Microservice                   │
+  │  - Local: http://localhost:8000                             │
+  │  - Render (Docker Web): https://smartshoppingdestination.onrender.com │
+  └─────────────────────────────────────────────────────────────┘
 ```
 
+### Technology Matrix
 *   **Frontend**: React, Vite, Lucide-React, Custom Glassmorphic Vanilla CSS.
-*   **Backend**: C# ASP.NET Core 8.0, Entity Framework Core with SQLite, Comparison Engine.
+*   **Backend**: C# ASP.NET Core 8.0, Entity Framework Core with SQLite.
 *   **AI Service**: Python 3.12, FastAPI, RapidFuzz (fuzzy matching), Pillow (OCR preprocessing).
+*   **Deployment & Hosting**: Fully deployed on **Render** using a multi-service blueprint (`render.yaml`):
+    *   **docket-web** (Vite Static Site): Serves the frontend client SPA.
+    *   **docket-backend** (Docker web service): Exposes the ASP.NET Core 8 Web API.
+    *   **docket-api** (Docker web service): Hosts the FastAPI OCR & matching python service.
 
 ---
 
