@@ -19,7 +19,13 @@ namespace backend.Services
         public PythonAIServiceClient(HttpClient httpClient, IConfiguration configuration)
         {
             _httpClient = httpClient;
-            _pythonServiceUrl = configuration["PythonService:BaseUrl"] ?? "http://127.0.0.1:8000";
+
+            // Prefer the PYTHON_SERVICE_URL environment variable (set in Render dashboard
+            // on the backend service), then fall back to appsettings.json, then localhost.
+            _pythonServiceUrl =
+                Environment.GetEnvironmentVariable("PYTHON_SERVICE_URL")
+                ?? configuration["PythonService:BaseUrl"]
+                ?? "http://127.0.0.1:8000";
 
             // Set a global timeout so a cold-start container on Render fails fast
             // rather than hanging the frontend indefinitely.

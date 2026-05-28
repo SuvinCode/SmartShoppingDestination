@@ -1,0 +1,70 @@
+# render.yaml — Render Blueprint
+# Defines all three Docket services: AI (Python), Backend (C# .NET), Frontend (React static)
+# Deploy via: Render Dashboard > New > Blueprint > connect repo
+
+services:
+  # ──────────────────────────────────────────────────────────
+  # 1. Python AI Service (FastAPI + Tesseract OCR)
+  # ──────────────────────────────────────────────────────────
+  - type: web
+    name: docket-ai-service
+    runtime: docker
+    dockerfilePath: ./ai-service/Dockerfile
+    dockerContext: ./ai-service
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: PORT
+        value: 8000
+
+  # ──────────────────────────────────────────────────────────
+  # 2. C# .NET Backend API
+  # ──────────────────────────────────────────────────────────
+  - type: web
+    name: docket-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /api/catalog/search?q=milk
+    envVars:
+      # Points the C# backend to the deployed Python AI service.
+      # This is the critical link — without it the backend defaults to
+      # http://127.0.0.1:8000 which doesn't exist in production.
+      - key: PYTHON_SERVICE_URL
+        fromService:
+          name: docket-ai-service
+          type: web
+          property: host
+          envVarName: RENDER_EXTERNAL_URL
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_URLS
+        value: http://+:5100
+
+  # ──────────────────────────────────────────────────────────
+  # 3. React Frontend (Vite static site)
+  # ──────────────────────────────────────────────────────────
+  - type: web
+    name: docket-frontend
+    runtime: static
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: ./frontend/dist
+    pullRequestPreviewsEnabled: false
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=0, must-revalidate
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+    routes:
+      # SPA fallback — all routes serve index.html
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      # Set VITE_API_URL to your deployed backend URL.
+      # Update this value in the Render dashboard after first deploy.
+      - key: VITE_API_URL
+        value: https://docket-backend.onrender.com
