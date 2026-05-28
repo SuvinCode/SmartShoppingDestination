@@ -1,13 +1,16 @@
 # render.yaml — Render Blueprint
-# Defines all three Docket services: AI (Python), Backend (C# .NET), Frontend (React static)
-# Deploy via: Render Dashboard > New > Blueprint > connect repo
+# Matches existing Render services: docket-web (frontend) + docket-api (C# backend)
+# Plus docket-ai for the Python OCR service.
 
 services:
   # ──────────────────────────────────────────────────────────
   # 1. Python AI Service (FastAPI + Tesseract OCR)
+  #    URL: https://docket-ai.onrender.com
+  #    If you already have this running as 'smartshoppingdestination',
+  #    you can skip this block and just set PYTHON_SERVICE_URL manually.
   # ──────────────────────────────────────────────────────────
   - type: web
-    name: docket-ai-service
+    name: docket-ai
     runtime: docker
     dockerfilePath: ./ai-service/Dockerfile
     dockerContext: ./ai-service
@@ -19,24 +22,24 @@ services:
 
   # ──────────────────────────────────────────────────────────
   # 2. C# .NET Backend API
+  #    Existing service: docket-api
+  #    URL: https://docket-api.onrender.com
   # ──────────────────────────────────────────────────────────
   - type: web
-    name: docket-backend
+    name: docket-api
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     plan: free
     healthCheckPath: /api/catalog/search?q=milk
     envVars:
-      # Points the C# backend to the deployed Python AI service.
-      # This is the critical link — without it the backend defaults to
-      # http://127.0.0.1:8000 which doesn't exist in production.
+      # Set this to your Python AI service URL in the Render dashboard.
+      # If using the old smartshoppingdestination service:
+      #   PYTHON_SERVICE_URL = https://smartshoppingdestination.onrender.com
+      # If deploying the new docket-ai service above:
+      #   PYTHON_SERVICE_URL = https://docket-ai.onrender.com
       - key: PYTHON_SERVICE_URL
-        fromService:
-          name: docket-ai-service
-          type: web
-          property: host
-          envVarName: RENDER_EXTERNAL_URL
+        value: https://smartshoppingdestination.onrender.com
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
       - key: ASPNETCORE_URLS
@@ -44,9 +47,11 @@ services:
 
   # ──────────────────────────────────────────────────────────
   # 3. React Frontend (Vite static site)
+  #    Existing service: docket-web
+  #    URL: https://docket-web.onrender.com  ← this is your website
   # ──────────────────────────────────────────────────────────
   - type: web
-    name: docket-frontend
+    name: docket-web
     runtime: static
     buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: ./frontend/dist
@@ -59,12 +64,10 @@ services:
         name: Cache-Control
         value: public, max-age=31536000, immutable
     routes:
-      # SPA fallback — all routes serve index.html
       - type: rewrite
         source: /*
         destination: /index.html
     envVars:
-      # Set VITE_API_URL to your deployed backend URL.
-      # Update this value in the Render dashboard after first deploy.
+      # Points the frontend at the C# backend
       - key: VITE_API_URL
-        value: https://docket-backend.onrender.com
+        value: https://docket-api.onrender.com
