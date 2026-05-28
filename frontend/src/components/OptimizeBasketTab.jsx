@@ -278,7 +278,7 @@ export default function OptimizeBasketTab({
           </div>
 
           {/* Loyalty card memberships */}
-          {(uploadedFiles.length > 0 || scannedReceipts.length > 0) && (
+          {(hasScannedReceipt || uploadedFiles.length > 0 || scannedReceipts.length > 0) && (
             <div className="loyalty-sync-box" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <span className="loyalty-title" style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)' }}>Loyalty Memberships</span>
               <div className="checkbox-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -306,7 +306,7 @@ export default function OptimizeBasketTab({
         </div>
 
         {/* Recommendations Box */}
-        {scannedReceipts.length > 0 && storeRecommendations && (
+        {(hasScannedReceipt || scannedReceipts.length > 0) && storeRecommendations && (
           <div className="glass-panel recommendations-box animate-slide-up" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--border-glass)', paddingBottom: '10px' }}>
               <Trophy size={18} style={{ color: 'var(--blue-600)' }} />
