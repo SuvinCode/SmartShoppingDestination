@@ -621,6 +621,7 @@ function DashboardPage({ user, onLogout, onNavigate, theme, setTheme }) {
     setOcrLoading(true);
     let successCount = 0;
     const newReceipts = [];
+    const isLive = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
 
     for (let file of uploadedFiles) {
       const formData = new FormData();
@@ -645,7 +646,9 @@ function DashboardPage({ user, onLogout, onNavigate, theme, setTheme }) {
           fileName: file.name
         });
 
-        showToast(`Scanned ${data.storeDisplayName || data.store} receipt — Total: $${(data.receiptTotal || 0).toFixed(2)}`);
+        if (!isLive) {
+          showToast(`Scanned ${data.storeDisplayName || data.store} receipt — Total: $${(data.receiptTotal || 0).toFixed(2)}`);
+        }
       } catch (err) {
         console.warn("OCR API call failed (simulating locally):", err.message);
 
@@ -653,16 +656,26 @@ function DashboardPage({ user, onLogout, onNavigate, theme, setTheme }) {
         const store = isWoolworths ? "Woolworths" : "Coles";
         const location = isWoolworths ? "South Yarra" : "Richmond";
 
-        const mockItems = isWoolworths ? [
-          { itemName: "Full Cream Milk", quantity: 1, unitPrice: 3.60, totalPrice: 3.60, packageSize: "2L" },
-          { itemName: "Helga's Wholemeal Bread", quantity: 1, unitPrice: 3.50, totalPrice: 3.50, packageSize: "750g" },
-          { itemName: "Bananas", quantity: 1, unitPrice: 3.90, totalPrice: 3.90, packageSize: "1kg" }
-        ] : [
-          { itemName: "Full Cream Milk", quantity: 2, unitPrice: 3.60, totalPrice: 7.20, packageSize: "2L" },
-          { itemName: "White Toast Bread", quantity: 1, unitPrice: 2.70, totalPrice: 2.70, packageSize: "650g" },
-          { itemName: "Bananas", quantity: 1, unitPrice: 3.50, totalPrice: 3.50, packageSize: "1kg" }
+        // Add variety to fallbacks so multiple scanned documents aren't identical
+        const mockVariants = [
+          [
+            { itemName: "Full Cream Milk", quantity: 1, unitPrice: 3.60, totalPrice: 3.60, packageSize: "2L" },
+            { itemName: "Helga's Wholemeal Bread", quantity: 1, unitPrice: 3.50, totalPrice: 3.50, packageSize: "750g" },
+            { itemName: "Bananas", quantity: 1, unitPrice: 3.90, totalPrice: 3.90, packageSize: "1kg" }
+          ],
+          [
+            { itemName: "Full Cream Milk", quantity: 2, unitPrice: 3.60, totalPrice: 7.20, packageSize: "2L" },
+            { itemName: "White Toast Bread", quantity: 1, unitPrice: 2.70, totalPrice: 2.70, packageSize: "650g" },
+            { itemName: "Apples", quantity: 1, unitPrice: 4.50, totalPrice: 4.50, packageSize: "1kg" }
+          ],
+          [
+            { itemName: "Penne Pasta", quantity: 2, unitPrice: 1.30, totalPrice: 2.60, packageSize: "500g" },
+            { itemName: "Heinz Baked Beans", quantity: 3, unitPrice: 2.20, totalPrice: 6.60, packageSize: "220g" },
+            { itemName: "Bega Tasty Cheese Block", quantity: 1, unitPrice: 8.50, totalPrice: 8.50, packageSize: "500g" }
+          ]
         ];
 
+        const mockItems = mockVariants[successCount % mockVariants.length];
         const mockTotal = mockItems.reduce((sum, i) => sum + i.totalPrice, 0);
 
         newReceipts.push({
@@ -676,7 +689,9 @@ function DashboardPage({ user, onLogout, onNavigate, theme, setTheme }) {
         });
 
         successCount++;
-        showToast(`Scanned ${store} ${location} receipt — Total: $${mockTotal.toFixed(2)} (offline)`);
+        if (!isLive) {
+          showToast(`Scanned ${store} ${location} receipt — Total: $${mockTotal.toFixed(2)} (offline)`);
+        }
       }
     }
 
