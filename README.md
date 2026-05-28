@@ -58,7 +58,7 @@ The project features a **C# ASP.NET Core** backend, a **Python FastAPI** AI micr
 Follow these steps to spin up the entire ecosystem.
 
 ### Prerequisite
-Ensure you have the .NET 8.0 SDK, Python 3.12, and Node.js installed on your Linux machine.
+Ensure you have the .NET 8.0 SDK, Python 3.12, and Node.js installed on your machine (Linux, macOS, or Windows).
 
 ### Quick Start (Recommended)
 You can launch all three services simultaneously (Python AI, C# Backend, and React Frontend) using the root startup script:
@@ -73,19 +73,34 @@ This script handles starting the C# backend and Python service in the background
 If you prefer running services in separate terminal windows, use the following manual commands:
 
 #### Step 1: Start the Python AI Service (Port 8000)
+**Linux/macOS:**
 ```bash
 cd ai-service && ./run.sh
 ```
+**Windows (PowerShell):**
+```powershell
+cd ai-service
+python -m venv .venv
+.\.venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
 
 #### Step 2: Start the C# Backend API (Port 5100)
+**Linux/macOS:**
 ```bash
 ~/.dotnet/dotnet run --project backend/backend.csproj
+```
+**Windows (PowerShell):**
+```powershell
+dotnet run --project backend/backend.csproj
 ```
 
 #### Step 3: Start the React Frontend Dev Server (Port 5173)
 ```bash
 npm --prefix frontend run dev
 ```
+*(On Windows, if the `--prefix` command fails, run `cd frontend` followed by `npm run dev`)*
 
 ---
 
