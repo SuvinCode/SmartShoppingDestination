@@ -18,6 +18,7 @@ export default function OptimizeBasketTab({
   comparison,
   uploadedFiles,
   ocrLoading,
+  scanProgress,
   loading,
   scannedReceipts,
   storeRecommendations,
@@ -238,6 +239,16 @@ export default function OptimizeBasketTab({
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                 <RefreshCw size={24} className="animate-spin" style={{ animation: 'spin 1.5s linear infinite' }} />
                 <span style={{ fontSize: '0.85rem', color: 'var(--primary)' }}>AI OCR Scanning Receipts...</span>
+                {scanProgress && (
+                  <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center', marginTop: '4px' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Scanning receipt {scanProgress.current} out of {scanProgress.total}
+                    </span>
+                    <div style={{ width: '80%', height: '4px', background: 'var(--bg-glass)', borderRadius: '2px', overflow: 'hidden' }}>
+                      <div style={{ width: `${(scanProgress.current / scanProgress.total) * 100}%`, height: '100%', background: 'var(--primary)', transition: 'width 0.3s ease' }}></div>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <>

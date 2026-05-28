@@ -64,6 +64,7 @@ function DashboardPage({ user, onLogout, onNavigate, theme, setTheme }) {
   // UI state
   const [loading, setLoading] = useState(false);
   const [ocrLoading, setOcrLoading] = useState(false);
+  const [scanProgress, setScanProgress] = useState(null);
   const [toast, setToast] = useState(null);
 
 
@@ -625,7 +626,7 @@ function DashboardPage({ user, onLogout, onNavigate, theme, setTheme }) {
 
     for (let i = 0; i < uploadedFiles.length; i++) {
       let file = uploadedFiles[i];
-      showToast(`Scanning receipt ${i + 1} of ${uploadedFiles.length}...`);
+      setScanProgress({ current: i + 1, total: uploadedFiles.length });
       const formData = new FormData();
       formData.append('file', file);
 
@@ -701,6 +702,7 @@ function DashboardPage({ user, onLogout, onNavigate, theme, setTheme }) {
     setHasScannedReceipt(true);
     await loadStoreRecommendations(true);
     setOcrLoading(false);
+    setScanProgress(null);
     setUploadedFiles([]);
     showToast(`Successfully processed ${successCount} receipt${successCount !== 1 ? 's' : ''} as purchase history.`);
   };
@@ -1032,6 +1034,7 @@ function DashboardPage({ user, onLogout, onNavigate, theme, setTheme }) {
                 comparison={comparison}
                 uploadedFiles={uploadedFiles}
                 ocrLoading={ocrLoading}
+                scanProgress={scanProgress}
                 loading={loading}
                 scannedReceipts={scannedReceipts}
                 storeRecommendations={storeRecommendations}
