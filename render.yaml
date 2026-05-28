@@ -63,6 +63,7 @@ services:
         source: /*
         destination: /index.html
     envVars:
-      # Points frontend at the C# backend (update once docket-backend is deployed)
+      # Points frontend at the C# backend
       - key: VITE_API_URL
-        value: https://docket-backend.onrender.com
+        value: https://docket-backend-jm71.onrender.com
+
