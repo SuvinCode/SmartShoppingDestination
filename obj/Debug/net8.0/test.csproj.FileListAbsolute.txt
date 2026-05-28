@@ -1,0 +1,5 @@
+/home/suvin/Desktop/GitHub/SmartShoppingDestination/obj/Debug/net8.0/test.GeneratedMSBuildEditorConfig.editorconfig
+/home/suvin/Desktop/GitHub/SmartShoppingDestination/obj/Debug/net8.0/test.AssemblyInfoInputs.cache
+/home/suvin/Desktop/GitHub/SmartShoppingDestination/obj/Debug/net8.0/test.AssemblyInfo.cs
+/home/suvin/Desktop/GitHub/SmartShoppingDestination/obj/Debug/net8.0/test.csproj.CoreCompileInputs.cache
+/home/suvin/Desktop/GitHub/SmartShoppingDestination/obj/Debug/net8.0/test.sourcelink.json

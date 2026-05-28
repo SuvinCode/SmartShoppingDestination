@@ -170,7 +170,7 @@ def extract_receipt_items(image_bytes: bytes, filename: str = "") -> dict:
             processed = preprocess_image(img)
             raw_text = pytesseract.image_to_string(
                 processed,
-                config='--psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789$. /\'-'
+                config='--psm 6 -c "tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789$. /\'-"'
             )
             if raw_text.strip():
                 ocr_succeeded = True
