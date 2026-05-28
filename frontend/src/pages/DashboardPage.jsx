@@ -328,7 +328,9 @@ function DashboardPage({ user, onLogout, onNavigate, theme, setTheme }) {
   };
 
   // loadStoreRecommendations — Phase 1-6 store ranking
-  const loadStoreRecommendations = async (forceMock = false) => {
+  // keepScannedFlag: if true, never reset hasScannedReceipt to false even if the
+  // backend returns no history yet (avoids race-condition immediately after upload).
+  const loadStoreRecommendations = async (forceMock = false, keepScannedFlag = false) => {
     setRecommendationsLoading(true);
     try {
       const response = await fetch(`${API_URL}/recommendations?userId=${user.userId}`);
@@ -337,7 +339,8 @@ function DashboardPage({ user, onLogout, onNavigate, theme, setTheme }) {
       setStoreRecommendations(data);
       if (data && data.productRankings && data.productRankings.length > 0) {
         setHasScannedReceipt(true);
-      } else {
+      } else if (!keepScannedFlag) {
+        // Only reset if we were NOT explicitly asked to keep the flag
         setHasScannedReceipt(false);
       }
     } catch {
@@ -682,7 +685,9 @@ function DashboardPage({ user, onLogout, onNavigate, theme, setTheme }) {
 
     setScannedReceipts(prev => [...prev, ...newReceipts]);
     setHasScannedReceipt(true);
-    await loadStoreRecommendations(true);
+    // Pass keepScannedFlag=true so loadStoreRecommendations cannot reset
+    // hasScannedReceipt back to false if purchase history isn't reflected yet.
+    await loadStoreRecommendations(true, true);
     setOcrLoading(false);
     setUploadedFiles([]);
     showToast(`Successfully processed ${successCount} receipt${successCount !== 1 ? 's' : ''} as purchase history.`);
