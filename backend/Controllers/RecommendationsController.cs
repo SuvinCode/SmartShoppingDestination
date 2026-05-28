@@ -25,7 +25,6 @@ namespace backend.Controllers
         /// ranked by weighted savings and by proximity, plus a combined trade-off narrative.
         /// </summary>
         [HttpGet]
-        [OutputCache(PolicyName = "RecommendationsPolicy")]
         public IActionResult GetRecommendations([FromQuery] int userId)
         {
             if (userId <= 0)

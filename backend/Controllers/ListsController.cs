@@ -193,11 +193,18 @@ namespace backend.Controllers
                 ? storeName
                 : $"{storeName} {storeLocation}";
 
+            // Fallback: if explicit total was not parsed but items were scanned, sum their total prices.
+            decimal totalVal = ocrResult.ReceiptTotal ?? 0M;
+            if (totalVal <= 0 && ocrResult.Items != null && ocrResult.Items.Count > 0)
+            {
+                totalVal = ocrResult.Items.Sum(i => i.TotalPrice);
+            }
+
             return Ok(new {
                 store = storeName,
                 storeLocation,
                 storeDisplayName = displayName,
-                receiptTotal = ocrResult.ReceiptTotal,
+                receiptTotal = totalVal,
                 items = matchedItems,
                 rawText = ocrResult.RawText
             });

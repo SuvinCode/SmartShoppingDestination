@@ -20,7 +20,6 @@ namespace backend.Controllers
         }
 
         [HttpGet("savings")]
-        [OutputCache(PolicyName = "SavingsStatsPolicy")]
         public IActionResult GetSavingsStats([FromQuery] int userId)
         {
             var logs = _context.SavingLogs
@@ -56,7 +55,6 @@ namespace backend.Controllers
         }
 
         [HttpGet("notifications")]
-        [OutputCache(Duration = 300)] // 5 minutes — notifications are simulated and rarely change
         public IActionResult GetNotifications([FromQuery] int userId)
         {
             var prefs = _context.UserPreferences.FirstOrDefault(p => p.UserId == userId);
