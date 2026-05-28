@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 
@@ -19,6 +20,10 @@ namespace backend.Services
         {
             _httpClient = httpClient;
             _pythonServiceUrl = configuration["PythonService:BaseUrl"] ?? "http://127.0.0.1:8000";
+
+            // Set a global timeout so a cold-start container on Render fails fast
+            // rather than hanging the frontend indefinitely.
+            _httpClient.Timeout = TimeSpan.FromSeconds(35);
         }
 
         public async Task<OcrResult> ExtractReceiptItemsAsync(Stream fileStream, string filename)
@@ -30,12 +35,13 @@ namespace backend.Services
                 var memoryStream = new MemoryStream();
                 await fileStream.CopyToAsync(memoryStream);
                 memoryStream.Position = 0;
-                
+
                 var streamContent = new StreamContent(memoryStream);
                 streamContent.Headers.ContentType = MediaTypeHeaderValue.Parse("image/jpeg");
                 content.Add(streamContent, "file", filename);
 
-                var response = await _httpClient.PostAsync($"{_pythonServiceUrl}/api/ocr", content);
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                var response = await _httpClient.PostAsync($"{_pythonServiceUrl}/api/ocr", content, cts.Token);
                 if (!response.IsSuccessStatusCode)
                 {
                     var err = await response.Content.ReadAsStringAsync();
@@ -69,7 +75,8 @@ namespace backend.Services
                     Limit = 3
                 };
 
-                var response = await _httpClient.PostAsJsonAsync($"{_pythonServiceUrl}/api/match", request);
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                var response = await _httpClient.PostAsJsonAsync($"{_pythonServiceUrl}/api/match", request, cts.Token);
                 if (!response.IsSuccessStatusCode)
                 {
                     return new MatchResult { Query = query, Matches = new List<FuzzyMatch>() };
@@ -84,7 +91,52 @@ namespace backend.Services
                 return new MatchResult { Query = query, Matches = new List<FuzzyMatch>() };
             }
         }
+
+        /// <summary>
+        /// Sends ALL OCR item names to the Python service in a single HTTP request,
+        /// replacing N sequential MatchCatalogItemAsync calls with one batch call.
+        /// For a receipt with 6 items this cuts 6 round-trips down to 1.
+        /// </summary>
+        public async Task<List<BatchMatchResultItem>> BatchMatchCatalogItemsAsync(
+            List<string> queries,
+            List<CatalogItemCandidate> candidates)
+        {
+            if (queries == null || queries.Count == 0)
+                return new List<BatchMatchResultItem>();
+
+            try
+            {
+                var request = new BatchMatchRequest
+                {
+                    Queries = queries,
+                    Candidates = candidates,
+                    Limit = 3
+                };
+
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+                var response = await _httpClient.PostAsJsonAsync($"{_pythonServiceUrl}/api/match/batch", request, cts.Token);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var err = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Python AI Batch Match Error: {err}");
+                    // Fall back: return empty matches for every query so the receipt still saves
+                    return queries.ConvertAll(q => new BatchMatchResultItem { Query = q, Matches = new List<FuzzyMatch>() });
+                }
+
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var batchResponse = await response.Content.ReadFromJsonAsync<BatchMatchResponse>(options);
+                return batchResponse?.Results
+                    ?? queries.ConvertAll(q => new BatchMatchResultItem { Query = q, Matches = new List<FuzzyMatch>() });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Exception calling Python AI Batch Match: {ex.Message}");
+                return queries.ConvertAll(q => new BatchMatchResultItem { Query = q, Matches = new List<FuzzyMatch>() });
+            }
+        }
     }
+
+    // ── DTOs ─────────────────────────────────────────────────────────────────────
 
     public class OcrResult
     {
@@ -130,6 +182,24 @@ namespace backend.Services
         public string Query { get; set; } = "";
         public List<CatalogItemCandidate> Candidates { get; set; } = new();
         public int Limit { get; set; } = 5;
+    }
+
+    public class BatchMatchRequest
+    {
+        public List<string> Queries { get; set; } = new();
+        public List<CatalogItemCandidate> Candidates { get; set; } = new();
+        public int Limit { get; set; } = 3;
+    }
+
+    public class BatchMatchResponse
+    {
+        public List<BatchMatchResultItem> Results { get; set; } = new();
+    }
+
+    public class BatchMatchResultItem
+    {
+        public string Query { get; set; } = "";
+        public List<FuzzyMatch> Matches { get; set; } = new();
     }
 
     public class MatchResult

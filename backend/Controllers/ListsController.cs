@@ -121,17 +121,16 @@ namespace backend.Controllers
                 return BadRequest("No file uploaded");
 
             using var stream = file.OpenReadStream();
-            
+
             // 1. Call Python AI OCR service
             var ocrResult = await _aiClient.ExtractReceiptItemsAsync(stream, file.FileName);
-            
-            // 2. Map OCR raw item names to database catalog items using python fuzzy matcher
-            var matchedItems = new List<object>();
-            
+
+            // 2. Build catalog candidates once (shared across all item matches)
             var dbCandidates = _context.CatalogItems
                 .Select(i => new { i.Id, i.Name })
                 .ToList()
-                .Select(i => {
+                .Select(i =>
+                {
                     string name = i.Name
                         .Replace("Coles ", "", StringComparison.OrdinalIgnoreCase)
                         .Replace("Woolworths ", "", StringComparison.OrdinalIgnoreCase)
@@ -142,15 +141,28 @@ namespace backend.Controllers
                 .Select(g => g.First())
                 .ToList();
 
+            // 3. Batch-match all OCR item names in a single HTTP call instead of N serial calls.
+            //    This is the key fix: previously we awaited one /api/match request per item
+            //    inside a foreach loop, which caused the OCR scanning slowness on production.
+            var ocrItemNames = ocrResult.Items.Select(i => i.RawName).ToList();
+            var batchMatches = await _aiClient.BatchMatchCatalogItemsAsync(ocrItemNames, dbCandidates);
+
+            // 4. Build a lookup by query name so we can pair each OCR item with its best match
+            var matchLookup = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var batchResult in batchMatches)
+            {
+                if (batchResult.Matches != null && batchResult.Matches.Count > 0)
+                    matchLookup[batchResult.Query] = batchResult.Matches[0].Candidate.Name;
+            }
+
+            // 5. Map matched names to catalog items and save purchase history
+            var matchedItems = new List<object>();
+
             foreach (var ocrItem in ocrResult.Items)
             {
-                var matchResult = await _aiClient.MatchCatalogItemAsync(ocrItem.RawName, dbCandidates);
-                string genericName = ocrItem.RawName;
-                
-                if (matchResult.Matches != null && matchResult.Matches.Any())
-                {
-                    genericName = matchResult.Matches.First().Candidate.Name;
-                }
+                string genericName = matchLookup.TryGetValue(ocrItem.RawName, out var matched)
+                    ? matched
+                    : ocrItem.RawName;
 
                 string packageSize = "";
                 var dbMatch = _context.CatalogItems.FirstOrDefault(c => c.Name.ToLower().Contains(genericName.ToLower()));
@@ -190,6 +202,7 @@ namespace backend.Controllers
                 rawText = ocrResult.RawText
             });
         }
+
 
         [HttpPost("compare")]
         public IActionResult Compare([FromQuery] int userId)
