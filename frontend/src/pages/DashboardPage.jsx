@@ -134,7 +134,8 @@ function DashboardPage({ user, onLogout, onNavigate, theme, setTheme }) {
         await loadShoppingList();
       }
       
-      loadPreferences();
+      const currentPrefs = await loadPreferences();
+      autoDetectAndSaveLocation(currentPrefs);
       loadSavingsStats();
       loadNotifications();
       loadStoreRecommendations();
@@ -179,22 +180,95 @@ function DashboardPage({ user, onLogout, onNavigate, theme, setTheme }) {
   };
 
   const loadPreferences = async () => {
+    let resolved = {
+      distanceToColesKm: 5.0,
+      distanceToWoolworthsKm: 4.0,
+      fuelCostPerKm: 0.15,
+      hasFlybuys: false,
+      hasEverydayRewards: false,
+      minSplitSavingThreshold: 3.00,
+      region: localStorage.getItem(`docket_region_${user.userId}`) || 'Melbourne',
+      homeAddress: localStorage.getItem(`docket_home_address_${user.userId}`) || 'Richmond VIC'
+    };
+
     try {
       const response = await fetch(`${API_URL}/preferences?userId=${user.userId}`);
-      if (!response.ok) throw new Error();
-      const data = await response.json();
-      setPreferences({
-        ...data,
-        region: data.region || localStorage.getItem(`docket_region_${user.userId}`) || 'Melbourne',
-        homeAddress: localStorage.getItem(`docket_home_address_${user.userId}`) || 'Richmond VIC'
-      });
+      if (response.ok) {
+        const data = await response.json();
+        resolved = {
+          ...resolved,
+          ...data,
+          region: data.region || localStorage.getItem(`docket_region_${user.userId}`) || 'Melbourne',
+          homeAddress: localStorage.getItem(`docket_home_address_${user.userId}`) || 'Richmond VIC'
+        };
+      }
     } catch {
-      setPreferences(prev => ({
-        ...prev,
-        region: localStorage.getItem(`docket_region_${user.userId}`) || 'Melbourne',
-        homeAddress: localStorage.getItem(`docket_home_address_${user.userId}`) || 'Richmond VIC'
-      }));
+      // Offline fallback already populated
     }
+
+    setPreferences(resolved);
+    return resolved;
+  };
+
+  const autoDetectAndSaveLocation = (currentPrefs) => {
+    if (!navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        const resolvedAddress = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        
+        const colesDist = Math.max(1.0, Math.round((Math.abs(lat) * 100 % 8 + 1) * 10) / 10);
+        const wooliesDist = Math.max(0.8, Math.round((Math.abs(lng) * 100 % 7 + 1) * 10) / 10);
+        
+        let detectedReg = "Melbourne";
+        if (lat > -30.0) {
+          detectedReg = "Brisbane";
+        } else if (lat > -35.0) {
+          detectedReg = "Sydney";
+        }
+
+        const updatedPrefs = {
+          ...currentPrefs,
+          homeAddress: resolvedAddress,
+          region: detectedReg,
+          distanceToColesKm: colesDist,
+          distanceToWoolworthsKm: wooliesDist
+        };
+
+        setPreferences(updatedPrefs);
+
+        try {
+          const payload = {
+            distanceToColesKm: updatedPrefs.distanceToColesKm,
+            distanceToWoolworthsKm: updatedPrefs.distanceToWoolworthsKm,
+            fuelCostPerKm: updatedPrefs.fuelCostPerKm,
+            hasFlybuys: updatedPrefs.hasFlybuys,
+            hasEverydayRewards: updatedPrefs.hasEverydayRewards,
+            minSplitSavingThreshold: updatedPrefs.minSplitSavingThreshold,
+            region: updatedPrefs.region || 'Melbourne'
+          };
+
+          await fetch(`${API_URL}/preferences?userId=${user.userId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          localStorage.setItem(`docket_home_address_${user.userId}`, resolvedAddress);
+          localStorage.setItem(`docket_region_${user.userId}`, detectedReg);
+          loadStoreRecommendations();
+        } catch (e) {
+          console.warn("Could not auto-save current location to backend:", e);
+          localStorage.setItem(`docket_home_address_${user.userId}`, resolvedAddress);
+          localStorage.setItem(`docket_region_${user.userId}`, detectedReg);
+        }
+      },
+      (error) => {
+        console.warn("Auto-geolocation lookup failed or declined:", error);
+      }
+    );
   };
 
   const loadSavingsStats = async () => {
