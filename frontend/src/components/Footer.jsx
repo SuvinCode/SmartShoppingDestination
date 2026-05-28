@@ -56,6 +56,7 @@ export default function Footer() {
               <span className="tech-tag"><Terminal size={12} /> Python (FastAPI)</span>
               <span className="tech-tag"><Terminal size={12} /> SQLite DB</span>
               <span className="tech-tag"><Terminal size={12} /> Entity Framework</span>
+              <span className="tech-tag"><Terminal size={12} /> Render Deployment</span>
             </div>
           </div>
 
