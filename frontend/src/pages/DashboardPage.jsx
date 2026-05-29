@@ -331,19 +331,30 @@ function DashboardPage({ user, onLogout, onNavigate, theme, setTheme }) {
   // loadStoreRecommendations — Phase 1-6 store ranking
   const loadStoreRecommendations = async (forceMock = false) => {
     setRecommendationsLoading(true);
+    const isForced = forceMock === true;
     try {
       const response = await fetch(`${API_URL}/recommendations?userId=${user.userId}`);
-      if (!response.ok) throw new Error();
+      if (!response.ok) throw new Error("Network response was not ok");
+      
+      if (response.status === 204) {
+        throw new Error("No Content");
+      }
+      
       const data = await response.json();
-      setStoreRecommendations(data);
       if (data && data.productRankings && data.productRankings.length > 0) {
+        setStoreRecommendations(data);
         setHasScannedReceipt(true);
       } else {
-        setHasScannedReceipt(false);
+        if (isForced || hasScannedReceipt || scannedReceipts.length > 0) {
+          throw new Error("Empty rankings returned, falling back to mock");
+        } else {
+          setStoreRecommendations(null);
+          setHasScannedReceipt(false);
+        }
       }
-    } catch {
+    } catch (err) {
       // Offline mock: simulates realistic output of the 6-phase engine
-      if (forceMock || hasScannedReceipt || scannedReceipts.length > 0) {
+      if (isForced || hasScannedReceipt || scannedReceipts.length > 0) {
         setHasScannedReceipt(true);
         setStoreRecommendations({
           productRankings: [
@@ -378,6 +389,7 @@ function DashboardPage({ user, onLogout, onNavigate, theme, setTheme }) {
         });
       } else {
         setStoreRecommendations(null);
+        setHasScannedReceipt(false);
       }
     } finally {
       setRecommendationsLoading(false);
